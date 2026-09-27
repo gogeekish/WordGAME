@@ -12,14 +12,21 @@ header h1{margin:0;font-size:22px}.status{font-size:13px;color:#a7f3d0}
 .panel{background:white;border-radius:14px;padding:16px;margin-bottom:18px;box-shadow:0 2px 10px #0001}
 h2,h3{margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 label{font-weight:bold;font-size:13px;display:block;margin:8px 0 5px}
-input,textarea,button{font:inherit}input,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px}textarea{min-height:70px;resize:vertical}
+input,textarea,button{font:inherit}input,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px}textarea{min-height:60px;resize:vertical}
 button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bold}
 .primary{background:#2563eb;color:white}.green{background:#16a34a;color:white}.red{background:#dc2626;color:white}.gray{background:#64748b;color:white}.orange{background:#ea580c;color:white}
-.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.section{border:1px solid #dbe2ea;border-radius:12px;padding:14px;margin-top:12px}
+.modebtn.active{background:#16a34a;color:white}.modebtn{background:#cbd5e1;color:#111}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.section{border:1px solid #dbe2ea;border-radius:12px;padding:14px;margin-top:12px;outline-offset:2px}
 .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin:10px 0}.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .showbtn{background:#0f766e;color:white}.hidebtn{background:#475569;color:white}.tiny{padding:6px 10px;font-size:12px}
 .timer{font-size:46px;font-weight:900;text-align:center;margin:8px}.winner{display:flex;gap:8px;align-items:center}
+.answer-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin:6px 0}
+.answer-row input{flex:2;min-width:120px}.mark-input{flex:1 !important;max-width:90px;min-width:70px !important}
+.answer-num{font-weight:bold;font-size:12px;color:#475569;min-width:18px}
+.scoreCard{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;border:1px solid #dbe2ea;border-radius:12px;padding:12px;margin-top:10px}
+.scoreCard .bonusBox{display:flex;gap:6px;align-items:center}.scoreCard .bonusBox input{width:90px}
+#voiceLog{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
 @media(max-width:800px){.grid{grid-template-columns:1fr}header{position:relative}}
 </style>
 </head>
@@ -40,6 +47,11 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 <button class="red" onclick="gameOver()">Game Over</button>
 <button class="gray" onclick="clearWinner()">Clear Winner</button>
 </div>
+<div class="controls" style="margin-top:14px">
+<b style="align-self:center">Board Mode:</b>
+<button class="modebtn" id="modeTeamBtn" onclick="setMode('team')">Team Mode — each player has their own 5 questions</button>
+<button class="modebtn" id="modeSharedBtn" onclick="setMode('shared')">Shared Mode — one board of 5 questions, award points by hand</button>
+</div>
 </div>
 
 <div class="panel">
@@ -55,7 +67,46 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 </div>
 </div>
 
-<div id="players"></div>
+<div class="panel" id="voicePanel">
+<h2>🎤 Voice Control (use on this host computer, in Chrome)</h2>
+<div class="controls">
+<button class="green" id="voiceBtn" onclick="toggleListening()">Start Listening</button>
+<span id="voiceStatus" style="align-self:center;font-size:13px;color:#475569">Not listening</span>
+</div>
+<div class="controls">
+<b style="align-self:center">Focus:</b>
+<button class="gray tiny" onclick="setFocus('p0',focus.qi)">Team 1</button>
+<button class="gray tiny" onclick="setFocus('p1',focus.qi)">Team 2</button>
+<button class="gray tiny" id="sharedFocusBtn" onclick="setFocus('shared',focus.qi)">Shared Board</button>
+</div>
+<div class="controls">
+<b style="align-self:center">Question:</b>
+<button class="gray tiny" onclick="setFocus(focus.scope,0)">1</button>
+<button class="gray tiny" onclick="setFocus(focus.scope,1)">2</button>
+<button class="gray tiny" onclick="setFocus(focus.scope,2)">3</button>
+<button class="gray tiny" onclick="setFocus(focus.scope,3)">4</button>
+<button class="gray tiny" onclick="setFocus(focus.scope,4)">5</button>
+</div>
+<div style="margin-top:8px;font-weight:bold">Currently controlling: <span id="focusLabel">PLAYER 1 — Question 1</span></div>
+<div id="voiceLog" style="margin-top:8px;font-size:12px;color:#475569;max-height:90px;overflow:auto">Say a command after clicking "Start Listening"…</div>
+<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:bold">Voice command list</summary>
+<div style="font-size:13px;line-height:1.7;margin-top:6px">
+"team 1" / "team 2" / "shared board" — switch which board you're controlling<br>
+"question 1" through "question 5" — jump to that question<br>
+"next question" / "previous question"<br>
+"show question" / "hide question" — reveal or hide the question text<br>
+"show answer 1" through "show answer 5" — reveal that answer<br>
+"hide answer 1" through "hide answer 5"<br>
+"show mark 1" (or "show score 1") through "show mark 5" — reveal that answer's points<br>
+"hide mark 1" through "hide mark 5"<br>
+"show all" / "hide all" — reveal or hide everything in the current question<br>
+"start timer" / "pause timer" / "reset timer"
+</div>
+</details>
+</div>
+
+<div class="panel" id="scorePanel"></div>
+<div id="board"></div>
 
 <div class="panel">
 <h2>Corner Image</h2>
@@ -75,36 +126,95 @@ socket.on("disconnect",()=>$("conn").textContent="Disconnected");
 socket.on("state",s=>{state=s;render();});
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+
+function getQArr(scope){
+ if(scope==="shared") return state.shared.questions;
+ return state.players[Number(scope[1])].questions;
+}
+function idBase(scope,qi,ai){return ai===undefined?`f-${scope}-${qi}`:`f-${scope}-${qi}-${ai}`}
+function labelForScope(scope){return scope==="shared"?"Shared Board":state.players[Number(scope[1])].name}
+
 function render(){
  if(!state)return;
  $("title").value=state.title;$("subtitle").value=state.subtitle;
  $("p1").value=state.players[0].name;$("p2").value=state.players[1].name;
  $("imageName").value=state.image.name||"";
  $("timer").textContent=formatTime(state.timer.remaining);
- const root=$("players");root.innerHTML="";
+ $("modeTeamBtn").className="modebtn"+(state.mode==="team"?" active":"");
+ $("modeSharedBtn").className="modebtn"+(state.mode==="shared"?" active":"");
+ renderScorePanel();
+ if(state.mode==="shared") renderSharedBoard(); else renderTeamBoard();
+ highlightFocus();
+}
+
+function renderScorePanel(){
+ const p=state.players;
+ $("scorePanel").innerHTML=`<h2>Scoreboard</h2>
+ <div class="scoreCard"><div><b>${esc(p[0].name)}</b> — Total: <b>${p[0].total}</b></div>
+  <div class="bonusBox"><label style="margin:0">Bonus:</label><input id="bonus-p0" value="${esc(p[0].bonus)}"><button class="tiny primary" onclick="saveBonus(0)">Save</button></div></div>
+ <div class="scoreCard"><div><b>${esc(p[1].name)}</b> — Total: <b>${p[1].total}</b></div>
+  <div class="bonusBox"><label style="margin:0">Bonus:</label><input id="bonus-p1" value="${esc(p[1].bonus)}"><button class="tiny primary" onclick="saveBonus(1)">Save</button></div></div>`;
+}
+function saveBonus(pi){state.players[pi].bonus=$("bonus-p"+pi).value;send()}
+
+function questionCardHTML(scope,qi,q,showAward){
+ const rows=q.answers.map((a,ai)=>{
+  const award=showAward?`<button class="tiny primary" onclick="awardBonus(${qi},${ai},0)">+ ${esc(state.players[0].name)}</button><button class="tiny primary" onclick="awardBonus(${qi},${ai},1)">+ ${esc(state.players[1].name)}</button>`:"";
+  return `<div class="answer-row"><span class="answer-num">${ai+1}.</span>
+   <input id="${idBase(scope,qi,ai)}-text" value="${esc(a.text)}" placeholder="Answer ${ai+1}">
+   <input id="${idBase(scope,qi,ai)}-mark" class="mark-input" value="${esc(a.mark)}" placeholder="Mark">
+   <button class="tiny ${a.showAnswer?'hidebtn':'showbtn'}" onclick="toggleField('${scope}',${qi},${ai},'showAnswer')">${a.showAnswer?'Hide Ans':'Show Ans'}</button>
+   <button class="tiny ${a.showMark?'hidebtn':'showbtn'}" onclick="toggleField('${scope}',${qi},${ai},'showMark')">${a.showMark?'Hide Mark':'Show Mark'}</button>
+   <button class="tiny primary" onclick="saveAnswerRow('${scope}',${qi},${ai})">Save</button>
+   ${award}</div>`;
+ }).join("");
+ return `<div class="section" data-focus-scope="${scope}" data-focus-qi="${qi}">
+  <div class="section-title"><h3>Question ${qi+1}</h3>
+   <button class="tiny ${q.showQuestion?'hidebtn':'showbtn'}" onclick="toggleField('${scope}',${qi},undefined,'showQuestion')">${q.showQuestion?'Hide':'Show'}</button></div>
+  <textarea id="${idBase(scope,qi)}-q" placeholder="Type the question...">${esc(q.question)}</textarea>
+  <div class="controls"><button class="tiny primary" onclick="saveQuestion('${scope}',${qi})">Save Question</button></div>
+  ${rows}
+ </div>`;
+}
+
+function renderTeamBoard(){
+ const root=$("board");root.innerHTML="";
  state.players.forEach((p,pi)=>{
   const box=document.createElement("div");box.className="panel";
-  box.innerHTML=`<h2>${esc(p.name)} — Total Score: ${p.total}</h2>`;
-  p.sections.forEach((s,si)=>{
-   const sec=document.createElement("div");sec.className="section";
-   sec.innerHTML=`<div class="section-title"><h3>Section ${si+1}</h3><strong>Score: ${esc(s.score)}</strong></div>
-   ${itemHTML(pi,si,"content","Document / Word / Content",s.content,s.showContent)}
-   ${itemHTML(pi,si,"score","Mark / Score",s.score,s.showScore,"input")}
-   ${itemHTML(pi,si,"question","Question",s.question,s.showQuestion)}`;
-   box.appendChild(sec);
-  });root.appendChild(box);
+  box.innerHTML=`<h2>${esc(p.name)}</h2>`+p.questions.map((q,qi)=>questionCardHTML('p'+pi,qi,q,false)).join("");
+  root.appendChild(box);
  });
 }
-function itemHTML(pi,si,key,label,val,shown,type="textarea"){
- const field=type==="input"?`<input id="f-${pi}-${si}-${key}" value="${esc(val)}">`:`<textarea id="f-${pi}-${si}-${key}">${esc(val)}</textarea>`;
- const visible=shown;
- return `<div class="item"><div class="item-head"><b>${label}</b>
- <button class="${visible?'hidebtn':'showbtn'} tiny" onclick="toggle(${pi},${si},'${key}')">${visible?'Hide':'Show'}</button></div>
- ${field}<div class="controls"><button class="primary tiny" onclick="saveItem(${pi},${si},'${key}')">Save</button></div></div>`;
+function renderSharedBoard(){
+ const root=$("board");root.innerHTML="";
+ const box=document.createElement("div");box.className="panel";
+ box.innerHTML=`<h2>Shared Board</h2><p style="font-size:13px;color:#475569">Use the "+ ${esc(state.players[0].name)}" / "+ ${esc(state.players[1].name)}" buttons to award that answer's points to a team once it's guessed.</p>`+
+  state.shared.questions.map((q,qi)=>questionCardHTML('shared',qi,q,true)).join("");
+ root.appendChild(box);
 }
+
+function saveQuestion(scope,qi){getQArr(scope)[qi].question=$(idBase(scope,qi)+"-q").value;send()}
+function saveAnswerRow(scope,qi,ai){
+ const a=getQArr(scope)[qi].answers[ai];
+ a.text=$(idBase(scope,qi,ai)+"-text").value;
+ a.mark=$(idBase(scope,qi,ai)+"-mark").value;
+ send();
+}
+function toggleField(scope,qi,ai,field){
+ const q=getQArr(scope)[qi];
+ const target=ai===undefined?q:q.answers[ai];
+ target[field]=!target[field];
+ send();
+}
+function awardBonus(qi,ai,playerIndex){
+ const mark=state.shared.questions[qi].answers[ai].mark;
+ const n=Number(String(mark).replace(/,/g,""));
+ state.players[playerIndex].bonus=(Number(state.players[playerIndex].bonus)||0)+(Number.isFinite(n)?n:0);
+ send();
+}
+function setMode(mode){state.mode=mode;send()}
+
 function save(){state.title=$("title").value;state.subtitle=$("subtitle").value;state.players[0].name=$("p1").value||"PLAYER 1";state.players[1].name=$("p2").value||"PLAYER 2";send()}
-function saveItem(pi,si,key){state.players[pi].sections[si][key]=$("f-"+pi+"-"+si+"-"+key).value;send()}
-function toggle(pi,si,key){state.players[pi].sections[si]["show"+key[0].toUpperCase()+key.slice(1)]=!state.players[pi].sections[si]["show"+key[0].toUpperCase()+key.slice(1)];send()}
 function send(){socket.emit("updateState",state)}
 function gameOver(){state.gameOver=true;const a=state.players[0].total,b=state.players[1].total;state.winner=a>b?state.players[0].name:b>a?state.players[1].name:a===b?"DRAW":"";send()}
 function clearWinner(){state.gameOver=false;state.winner="";send()}
@@ -115,6 +225,87 @@ function uploadImage(){
 function clearImage(){state.image={data:"",name:""};send()}
 function formatTime(sec){sec=Math.max(0,Number(sec)||0);const m=Math.floor(sec/60),s=sec%60;return m?`${m}:${String(s).padStart(2,"0")}`:String(s)}
 function openPublic(){window.open("/public.html","_blank")}
+
+/* ---------- Voice control ---------- */
+let focus={scope:'p0',qi:0};
+function setFocus(scope,qi){focus.scope=scope;focus.qi=qi;highlightFocus()}
+function highlightFocus(){
+ if(!state)return;
+ document.querySelectorAll('[data-focus-scope]').forEach(el=>{
+  const match=el.dataset.focusScope===focus.scope&&Number(el.dataset.focusQi)===focus.qi;
+  el.style.outline=match?"3px solid #f59e0b":"";
+ });
+ $("focusLabel").textContent=labelForScope(focus.scope)+" — Question "+(focus.qi+1);
+}
+function logVoice(text){
+ const el=$("voiceLog");
+ const line=document.createElement("div");line.textContent="> "+text;
+ el.appendChild(line);
+ while(el.children.length>8)el.removeChild(el.firstChild);
+ el.scrollTop=el.scrollHeight;
+}
+const WORD_NUM={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10};
+function parseNumber(str){
+ if(!str)return null;
+ str=str.trim().toLowerCase();
+ if(/^\d+$/.test(str))return parseInt(str,10);
+ return WORD_NUM[str]||null;
+}
+function setShow(scope,qi,ai,field,value){
+ const arr=getQArr(scope);
+ if(ai===undefined)arr[qi][field]=value; else arr[qi].answers[ai][field]=value;
+}
+
+let recognition=null,listening=false;
+function initRecognition(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){$("voiceStatus").textContent="Voice control isn't supported in this browser. Please use Chrome.";return null}
+ const r=new SR();
+ r.continuous=true;r.interimResults=false;r.lang="en-US";
+ r.onresult=e=>{
+  const text=e.results[e.results.length-1][0].transcript.trim().toLowerCase();
+  logVoice(text);
+  handleVoiceCommand(text);
+ };
+ r.onerror=e=>logVoice("(mic error: "+e.error+")");
+ r.onend=()=>{if(listening)try{r.start()}catch(e){}};
+ return r;
+}
+function toggleListening(){
+ if(!recognition)recognition=initRecognition();
+ if(!recognition)return;
+ listening=!listening;
+ if(listening){recognition.start();$("voiceBtn").textContent="Stop Listening";$("voiceStatus").textContent="Listening…"}
+ else{recognition.stop();$("voiceBtn").textContent="Start Listening";$("voiceStatus").textContent="Stopped"}
+}
+function handleVoiceCommand(text){
+ let m;
+ if(m=text.match(/^(?:team|player)\s+(\w+)$/)){const n=parseNumber(m[1]);if(n===1||n===2){setFocus('p'+(n-1),focus.qi);return}}
+ if(/^shared(\s+board)?$/.test(text)){setFocus('shared',focus.qi);return}
+ if(m=text.match(/^(?:go to |focus )?question\s+(\w+)$/)){const n=parseNumber(m[1]);if(n>=1&&n<=5){setFocus(focus.scope,n-1)}return}
+ if(/^next question$/.test(text)){setFocus(focus.scope,Math.min(4,focus.qi+1));return}
+ if(/^(?:previous|prev) question$/.test(text)){setFocus(focus.scope,Math.max(0,focus.qi-1));return}
+ if(m=text.match(/^show question(?:\s+(\w+))?$/)){const qi=m[1]?parseNumber(m[1])-1:focus.qi;setFocus(focus.scope,qi);setShow(focus.scope,qi,undefined,'showQuestion',true);send();render();return}
+ if(/^hide question$/.test(text)){setShow(focus.scope,focus.qi,undefined,'showQuestion',false);send();render();return}
+ if(m=text.match(/^show answer\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showAnswer',true);send();render()}return}
+ if(m=text.match(/^hide answer\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showAnswer',false);send();render()}return}
+ if(m=text.match(/^show (?:mark|score)\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showMark',true);send();render()}return}
+ if(m=text.match(/^hide (?:mark|score)\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showMark',false);send();render()}return}
+ if(/^show all$/.test(text)){
+  setShow(focus.scope,focus.qi,undefined,'showQuestion',true);
+  for(let ai=0;ai<5;ai++){setShow(focus.scope,focus.qi,ai,'showAnswer',true);setShow(focus.scope,focus.qi,ai,'showMark',true)}
+  send();render();return;
+ }
+ if(/^hide all$/.test(text)){
+  setShow(focus.scope,focus.qi,undefined,'showQuestion',false);
+  for(let ai=0;ai<5;ai++){setShow(focus.scope,focus.qi,ai,'showAnswer',false);setShow(focus.scope,focus.qi,ai,'showMark',false)}
+  send();render();return;
+ }
+ if(/^start timer$/.test(text)){socket.emit('timerStart');return}
+ if(/^pause timer$/.test(text)){socket.emit('timerPause');return}
+ if(/^reset timer$/.test(text)){socket.emit('timerReset',30);return}
+ logVoice('(not recognized: "'+text+'")');
+}
 </script>
 </body>
 </html>

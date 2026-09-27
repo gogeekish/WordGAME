@@ -11,25 +11,54 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static(__dirname));
 
+const QUESTIONS_PER_PLAYER = 5;
+const ANSWERS_PER_QUESTION = 5;
+
+function makeAnswer() {
+  return { text: "", mark: "", showAnswer: false, showMark: false };
+}
+function makeQuestion() {
+  return {
+    question: "",
+    showQuestion: false,
+    answers: Array.from({ length: ANSWERS_PER_QUESTION }, makeAnswer)
+  };
+}
+function makePlayer(name) {
+  return {
+    name,
+    questions: Array.from({ length: QUESTIONS_PER_PLAYER }, makeQuestion),
+    bonus: 0,
+    total: 0
+  };
+}
+
 let state = {
   title: "WORD ARENA TV",
   subtitle: "OFFLINE WORD GAME",
+  mode: "team", // "team" = each player has their own 5 questions, "shared" = one shared board of 5 questions
   timer: { running: false, remaining: 30, lastStarted: null },
   gameOver: false,
   winner: "",
   image: { data: "", name: "" },
-  players: [
-    { name: "PLAYER 1", sections: Array.from({length:5}, () => ({content:"", score:"", question:"", showContent:false, showScore:false, showQuestion:false})), total:0 },
-    { name: "PLAYER 2", sections: Array.from({length:5}, () => ({content:"", score:"", question:"", showContent:false, showScore:false, showQuestion:false})), total:0 }
-  ]
+  players: [makePlayer("PLAYER 1"), makePlayer("PLAYER 2")],
+  shared: { questions: Array.from({ length: QUESTIONS_PER_PLAYER }, makeQuestion) }
 };
+
+function toNumber(v) {
+  const n = Number(String(v).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
 
 function normalize() {
   state.players.forEach(p => {
-    p.total = p.sections.reduce((sum, s) => {
-      const n = Number(String(s.score).replace(/,/g, ""));
-      return sum + (Number.isFinite(n) ? n : 0);
-    }, 0);
+    let earned = 0;
+    p.questions.forEach(q => {
+      q.answers.forEach(a => {
+        if (a.showMark) earned += toNumber(a.mark);
+      });
+    });
+    p.total = earned + toNumber(p.bonus);
   });
 }
 
@@ -55,7 +84,8 @@ io.on("connection", socket => {
       ...incoming,
       timer: { ...state.timer, ...(incoming.timer || {}) },
       image: { ...state.image, ...(incoming.image || {}) },
-      players: incoming.players || state.players
+      players: incoming.players || state.players,
+      shared: incoming.shared || state.shared
     };
     normalize();
     io.emit("state", publicState());
