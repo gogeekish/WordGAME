@@ -153,11 +153,13 @@ function boot(){
 
 function validCodesNow(){
   const now = Math.floor(Date.now() / 1000);
-  // accept current window and the previous one, so a code someone just read
-  // still works even if a few seconds passed while they typed it in
+  // accept the current window plus one window on either side, so this still
+  // works across two separate computers whose clocks aren't perfectly
+  // matched (and gives a little extra time to type the code in)
   return [
+    NextGenTOTP.totp(SHARED_SECRET, TIME_STEP, DIGITS, now - TIME_STEP),
     NextGenTOTP.totp(SHARED_SECRET, TIME_STEP, DIGITS, now),
-    NextGenTOTP.totp(SHARED_SECRET, TIME_STEP, DIGITS, now - TIME_STEP)
+    NextGenTOTP.totp(SHARED_SECRET, TIME_STEP, DIGITS, now + TIME_STEP)
   ];
 }
 
