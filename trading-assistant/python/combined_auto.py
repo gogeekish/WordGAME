@@ -6,16 +6,25 @@ using that strategy's own entry/SL/TP rule. Only one position is open
 at a time across all three strategies - once it closes, the next
 qualifying signal from any strategy is free to trade again (the
 "reboot").
+
+Walks candles_s1 one bar at a time as the shared clock (the three
+candle lists are expected to be the same underlying market data - see
+the "Can These Live in One App?" section of the strategy notebook) so
+an optional RiskGate can count bars for its cooldown, and each bar
+polls broker.pop_closed_outcomes() to learn how the last trade actually
+ended. One gate covers all three strategies together, matching "one
+robot managing trades from any of the three."
 """
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import strategy1_sweep_wick as s1
 import strategy2_bos_fvg as s2
 import strategy3_wick_sweep_after as s3
 from broker import Broker, OrderRequest
 from levels import fixed_distance_levels
+from risk_gate import RiskGate
 
 
 @dataclass
@@ -101,21 +110,41 @@ def evaluate_and_trade(
     volume: float,
     stop_distance: float,
     reward_multiple: float = 2.0,
+    gate: Optional[RiskGate] = None,
     **detector_kwargs,
 ) -> List[TaggedOrder]:
-    """Places a trade for the first qualifying signal from any strategy,
-    then skips every other signal until the position closes. Returns the
-    orders that were actually traded, in order. detector_kwargs are
-    forwarded to find_all_orders (e.g. s1_lookback)."""
+    """Places a trade for the first qualifying signal from any strategy
+    (walking candles_s1 bar by bar), then skips every other signal
+    until the position closes AND, when a gate is given, the gate
+    allows trading again. Returns the orders that were actually traded,
+    in order. detector_kwargs are forwarded to find_all_orders (e.g.
+    s1_lookback)."""
     if stop_distance <= 0:
         raise ValueError("stop_distance must be positive")
 
-    traded: List[TaggedOrder] = []
     all_orders = find_all_orders(
         candles_s1, candles_s2, candles_s3, stop_distance, reward_multiple, **detector_kwargs
     )
+    # setdefault keeps the first (highest-priority, per the tie-break
+    # above) order already sorted into each time slot.
+    orders_by_time = {}
     for order in all_orders:
+        orders_by_time.setdefault(order.time, order)
+
+    traded: List[TaggedOrder] = []
+    for candle in candles_s1:
+        if gate is not None:
+            gate.advance_bar()
+            for outcome in broker.pop_closed_outcomes(symbol):
+                gate.record_outcome(outcome)
+
         if broker.has_open_position(symbol):
+            continue
+        if gate is not None and not gate.can_trade():
+            continue
+
+        order = orders_by_time.get(candle.time)
+        if order is None:
             continue
 
         result = broker.place_order(OrderRequest(
@@ -163,11 +192,13 @@ if __name__ == "__main__":
     ]
 
     broker = FakeBroker()
+    gate = RiskGate(cooldown_bars=5, max_consecutive_losses=3)
     traded = evaluate_and_trade(
         sample_s1, sample_s2, sample_s3, broker,
         symbol="XAUUSD", volume=0.01, stop_distance=1.0,
         s1_lookback=3, s1_tolerance_ratio=0.2,
         s3_lookback=3, s3_tolerance_ratio=0.2, s3_max_wait_bars=5,
+        gate=gate,
     )
     print(f"Trades placed: {len(traded)} (only the first-in-time signal should fire, the rest wait)")
     for order in broker.orders:

@@ -11,6 +11,7 @@
 #property description "Runs Strategy 1, 2, and 3 together and trades whichever one confirms first. Test on a demo account first."
 
 #include <Trade\Trade.mqh>
+#include "RiskGate.mqh"
 
 //----- Strategy 1 inputs
 input int    InpS1Lookback       = 20;
@@ -32,8 +33,11 @@ input double InpRewardMultiple = 2.0;      // Used by all three for their TP dis
 input double InpVolume         = 0.01;     // Lots per trade
 input ulong  InpMagicNumber    = 20260199;
 input bool   InpUsePushNotify  = false;
+input int    InpCooldownBars         = 5;  // Bars to wait after a LOSS before trading again (shared across all 3)
+input int    InpMaxConsecutiveLosses = 3;  // Halt entirely after this many losses in a row (needs a manual restart)
 
 CTrade   g_trade;
+CRiskGate g_riskGate;
 datetime g_lastProcessedBarTime = 0;
 
 // Strategy 1 state
@@ -60,6 +64,7 @@ datetime g_s3PendingCandleTime = 0;
 int OnInit()
 {
    g_trade.SetExpertMagicNumber(InpMagicNumber);
+   g_riskGate.Init(InpCooldownBars, InpMaxConsecutiveLosses);
    g_lastProcessedBarTime = 0;
    g_s1PendingSweep = false;
    g_s2HaveSwingHigh = false;
@@ -369,7 +374,9 @@ bool RunStrategy3(const int shift)
 //| resumes fresh once flat again. Whichever strategy confirms first  |
 //| on a given bar gets the trade; the arbitrary tie-break order when |
 //| more than one confirms on the very same bar is Strategy 1, then   |
-//| Strategy 2, then Strategy 3.                                      |
+//| Strategy 2, then Strategy 3. One shared CRiskGate (RiskGate.mqh)  |
+//| covers all three: a cooldown after any loss, and a hard stop      |
+//| after too many losses in a row from any of them combined.         |
 //+------------------------------------------------------------------+
 void OnTick()
 {
@@ -378,8 +385,20 @@ void OnTick()
       return;
    g_lastProcessedBarTime = currentBarTime;
 
+   g_riskGate.AdvanceBar();
+   g_riskGate.CheckClosedTrades(_Symbol, InpMagicNumber);
+   if(g_riskGate.ConsumeJustHalted())
+   {
+      string haltMsg = StringFormat("Combined auto: HALTED - %s. Call g_riskGate.Reset() (or restart the EA) to resume.",
+                                     g_riskGate.HaltedReason());
+      Alert(haltMsg);
+      Print(haltMsg);
+   }
+
    if(HasOpenPosition())
       return; // already in a trade from one of the three - wait for it to close (the reboot)
+   if(!g_riskGate.CanTrade())
+      return; // cooling down after a loss, or halted - see RiskGate.mqh
 
    int shift = 1; // the bar that just closed
    int required = MathMax(InpS1Lookback, MathMax(2 * InpS2ConfirmBars + 3, InpS3Lookback)) + shift + 1;

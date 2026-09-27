@@ -8,7 +8,7 @@ sandbox" and "actually places trades in MetaTrader 5".
 """
 
 from dataclasses import dataclass, field
-from typing import List, Protocol
+from typing import Dict, List, Optional, Protocol
 
 
 @dataclass
@@ -32,16 +32,24 @@ class OrderResult:
 class Broker(Protocol):
     def has_open_position(self, symbol: str) -> bool: ...
     def place_order(self, request: OrderRequest) -> OrderResult: ...
+    def pop_closed_outcomes(self, symbol: str) -> List[str]: ...
 
 
 @dataclass
 class FakeBroker:
     """In-memory broker for testing the auto-trade wiring without a real
     MetaTrader 5 connection. Records every order it was asked to place
-    and tracks a simple open/closed flag per symbol."""
+    and tracks a simple open/closed flag per symbol.
+
+    There's no real market here, so nothing closes a position on its
+    own - a test or demo closes one explicitly with close_position(),
+    optionally telling it whether that trade was a "win" or "loss" so
+    pop_closed_outcomes() (and therefore a RiskGate) has something to
+    react to."""
 
     orders: List[OrderRequest] = field(default_factory=list)
     _open_symbols: set = field(default_factory=set)
+    _pending_outcomes: Dict[str, List[str]] = field(default_factory=dict)
 
     def has_open_position(self, symbol: str) -> bool:
         return symbol in self._open_symbols
@@ -53,8 +61,13 @@ class FakeBroker:
         self._open_symbols.add(request.symbol)
         return OrderResult(accepted=True, ticket=len(self.orders), message="filled (fake)")
 
-    def close_position(self, symbol: str) -> None:
+    def close_position(self, symbol: str, outcome: Optional[str] = None) -> None:
         self._open_symbols.discard(symbol)
+        if outcome is not None:
+            self._pending_outcomes.setdefault(symbol, []).append(outcome)
+
+    def pop_closed_outcomes(self, symbol: str) -> List[str]:
+        return self._pending_outcomes.pop(symbol, [])
 
 
 class Mt5Broker:
@@ -77,6 +90,7 @@ class Mt5Broker:
 
         self._mt5 = mt5
         self.magic_number = magic_number
+        self._history_checked_from: Dict[str, "object"] = {}
 
         if not self._mt5.initialize():
             raise RuntimeError(f"MetaTrader5.initialize() failed: {self._mt5.last_error()}")
@@ -84,6 +98,31 @@ class Mt5Broker:
     def has_open_position(self, symbol: str) -> bool:
         positions = self._mt5.positions_get(symbol=symbol)
         return positions is not None and len(positions) > 0
+
+    def pop_closed_outcomes(self, symbol: str) -> List[str]:
+        """Looks up this EA's closing deals (DEAL_ENTRY_OUT) for `symbol`
+        since the last call, and returns "win"/"loss" for each one, in
+        order, based on the deal's profit. Advances the watermark so the
+        same deal is never reported twice."""
+        from datetime import datetime, timedelta, timezone
+
+        now = datetime.now(timezone.utc)
+        since = self._history_checked_from.get(symbol, now - timedelta(days=1))
+
+        deals = self._mt5.history_deals_get(since, now, group=symbol)
+        self._history_checked_from[symbol] = now
+
+        if deals is None:
+            return []
+
+        outcomes = []
+        for deal in deals:
+            if deal.magic != self.magic_number:
+                continue
+            if deal.entry != self._mt5.DEAL_ENTRY_OUT:
+                continue  # only closing deals represent a finished trade
+            outcomes.append("win" if deal.profit >= 0 else "loss")
+        return outcomes
 
     def place_order(self, request: OrderRequest) -> OrderResult:
         if request.volume <= 0:

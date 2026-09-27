@@ -4,11 +4,19 @@ Same detection as strategy2_bos_fvg.py, but instead of only alerting,
 each retest signal is turned into a real order through a Broker. Only
 one position is opened at a time per symbol - once it closes, the next
 qualifying signal is free to trade again (the "reboot").
+
+Walks the candles one bar at a time (not signal-by-signal) so an
+optional RiskGate can count bars for its cooldown, and each bar polls
+broker.pop_closed_outcomes() to learn how the last trade actually
+ended - in real trading that comes from the broker (Mt5Broker reads
+your account's trade history), not from anything this script simulates
+itself.
 """
 
-from typing import List
+from typing import List, Optional
 
 from broker import Broker, OrderRequest
+from risk_gate import RiskGate
 from strategy2_bos_fvg import Candle, RetestSignal, find_signals
 
 
@@ -20,16 +28,33 @@ def evaluate_and_trade(
     confirm_bars: int = 2,
     fvg_buffer_ratio: float = 0.25,
     reward_multiple: float = 2.0,
+    gate: Optional[RiskGate] = None,
 ) -> List[RetestSignal]:
-    """Finds every Strategy 2 signal and, for each one, places a trade
-    ONLY if no position is currently open for `symbol`. Entry/SL/TP1 come
-    straight from the signal; TP2 is used as the order's take-profit
-    since it is the further, higher-conviction target. Returns the
-    signals that were actually traded, in order."""
+    """Finds every Strategy 2 signal and, walking bar by bar, places a
+    trade ONLY if no position is open AND (when a gate is given) the
+    gate currently allows it. Entry/SL/TP1 come straight from the
+    signal; TP2 is used as the order's take-profit since it is the
+    further, higher-conviction target. Returns the signals that were
+    actually traded, in order."""
+    signals_by_time = {
+        s.time: s for s in find_signals(candles, confirm_bars, fvg_buffer_ratio, reward_multiple)
+    }
     traded: List[RetestSignal] = []
-    for signal in find_signals(candles, confirm_bars, fvg_buffer_ratio, reward_multiple):
+
+    for candle in candles[2 * confirm_bars:]:
+        if gate is not None:
+            gate.advance_bar()
+            for outcome in broker.pop_closed_outcomes(symbol):
+                gate.record_outcome(outcome)
+
         if broker.has_open_position(symbol):
-            continue  # already in a trade - wait for it to close before trading again
+            continue
+        if gate is not None and not gate.can_trade():
+            continue
+
+        signal = signals_by_time.get(candle.time)
+        if signal is None:
+            continue
 
         result = broker.place_order(OrderRequest(
             symbol=symbol,
@@ -60,7 +85,8 @@ if __name__ == "__main__":
         Candle("t7", 109.5, 109.8, 103.5, 104.5),
     ]
     broker = FakeBroker()
-    traded = evaluate_and_trade(sample, broker, symbol="XAUUSD", volume=0.01)
+    gate = RiskGate(cooldown_bars=5, max_consecutive_losses=3)
+    traded = evaluate_and_trade(sample, broker, symbol="XAUUSD", volume=0.01, gate=gate)
     print(f"Trades placed: {len(traded)}")
     for order in broker.orders:
         print(

@@ -11,6 +11,7 @@
 #property description "Places a trade automatically when price retests the FVG left behind by a BOS. Test on a demo account first."
 
 #include <Trade\Trade.mqh>
+#include "RiskGate.mqh"
 
 input int    InpConfirmBars    = 2;       // Bars each side needed to confirm a swing high/low
 input double InpFvgBufferRatio = 0.25;    // Stop-loss buffer beyond the FVG, as a fraction of its height
@@ -18,8 +19,11 @@ input double InpRewardMultiple = 2.0;     // TP2 distance as a multiple of the e
 input double InpVolume         = 0.01;    // Lots per trade
 input ulong  InpMagicNumber    = 20260102;
 input bool   InpUsePushNotify  = false;   // Also send a push notification (requires MetaTrader setup)
+input int    InpCooldownBars         = 5; // Bars to wait after a LOSS before trading again
+input int    InpMaxConsecutiveLosses = 3; // Halt entirely after this many losses in a row (needs a manual restart)
 
 CTrade   g_trade;
+CRiskGate g_riskGate;
 datetime g_lastProcessedBarTime = 0;
 
 double   g_lastSwingHigh = 0.0;
@@ -37,6 +41,7 @@ double   g_impulseExtreme = 0.0;
 int OnInit()
 {
    g_trade.SetExpertMagicNumber(InpMagicNumber);
+   g_riskGate.Init(InpCooldownBars, InpMaxConsecutiveLosses);
    g_lastProcessedBarTime = 0;
    g_haveSwingHigh = false;
    g_haveSwingLow  = false;
@@ -150,6 +155,8 @@ void PlaceTrade(const string direction, const double stopLoss, const double take
 //+------------------------------------------------------------------+
 //| Runs once per closed bar. While a position from this EA is open,  |
 //| detection is paused entirely - it resumes fresh once flat again.  |
+//| A cooldown after a loss, and a hard stop after too many losses in |
+//| a row, both come from CRiskGate (RiskGate.mqh).                   |
 //+------------------------------------------------------------------+
 void OnTick()
 {
@@ -158,8 +165,20 @@ void OnTick()
       return;
    g_lastProcessedBarTime = currentBarTime;
 
+   g_riskGate.AdvanceBar();
+   g_riskGate.CheckClosedTrades(_Symbol, InpMagicNumber);
+   if(g_riskGate.ConsumeJustHalted())
+   {
+      string haltMsg = StringFormat("Strategy 2 auto: HALTED - %s. Call g_riskGate.Reset() (or restart the EA) to resume.",
+                                     g_riskGate.HaltedReason());
+      Alert(haltMsg);
+      Print(haltMsg);
+   }
+
    if(HasOpenPosition())
       return; // already in a trade - wait for it to close (the reboot)
+   if(!g_riskGate.CanTrade())
+      return; // cooling down after a loss, or halted - see RiskGate.mqh
 
    int shift = 1; // the bar that just closed
    if(Bars(_Symbol, _Period) < 2 * InpConfirmBars + shift + 3)
