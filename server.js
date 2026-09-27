@@ -63,7 +63,8 @@ function makePlayer(name) {
   return {
     name,
     questions: Array.from({ length: QUESTIONS_PER_PLAYER }, makeQuestion),
-    bonus: 0,
+    teamScore: 0,
+    sharedScore: 0,
     total: 0
   };
 }
@@ -85,15 +86,12 @@ function toNumber(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+// Team Mode and Shared Mode are two separate games with their own scores —
+// switching modes never mixes them. Points only move when the host clicks
+// a "+ Player" award button; showing/hiding an answer is purely visual.
 function normalize() {
   state.players.forEach(p => {
-    let earned = 0;
-    p.questions.forEach(q => {
-      q.answers.forEach(a => {
-        if (a.showMark) earned += toNumber(a.mark);
-      });
-    });
-    p.total = earned + toNumber(p.bonus);
+    p.total = state.mode === "shared" ? toNumber(p.sharedScore) : toNumber(p.teamScore);
   });
 }
 

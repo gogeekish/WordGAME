@@ -148,12 +148,13 @@ School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
 "team 1" / "team 2" / "shared board" — switch which board you're controlling<br>
 "question 1" through "question 5" — jump to that question<br>
 "next question" / "previous question"<br>
-"show question" / "hide question" — reveal or hide the question text<br>
-"show answer 1" through "show answer 5" — reveal that answer<br>
+"show question" / "show question 1" through "show question 5" — reveal EVERYTHING for that question (the question, all 5 answers, all 5 points)<br>
+"hide question" / "hide question 1" through "hide question 5" — hide everything for that question<br>
+"show answer 1" through "show answer 5" — reveal just that one answer<br>
 "hide answer 1" through "hide answer 5"<br>
-"show mark 1" (or "show score 1") through "show mark 5" — reveal that answer's points<br>
+"show mark 1" (or "show score 1") through "show mark 5" — reveal just that one answer's points<br>
 "hide mark 1" through "hide mark 5"<br>
-"show all" / "hide all" — reveal or hide everything in the current question<br>
+"show all" / "hide all" — same as "show question" / "hide question" for the current question<br>
 "start timer" / "pause timer" / "reset timer"
 </div>
 </details>
@@ -208,17 +209,31 @@ function render(){
 
 function renderScorePanel(){
  const p=state.players;
- $("scorePanel").innerHTML=`<h2>Scoreboard</h2>
+ const field=state.mode==="shared"?"sharedScore":"teamScore";
+ const label=state.mode==="shared"?"Shared Board Game — Score":"Team Mode Game — Score";
+ $("scorePanel").innerHTML=`<h2>Scoreboard — ${label}</h2>
+ <p style="font-size:12px;color:#475569;margin-top:0">Team Mode and the Shared Board are two separate games — their scores never mix. Use the "+" buttons on each answer to award points; the number below can also be corrected by hand.</p>
  <div class="scoreCard"><div><b>${esc(p[0].name)}</b> — Total: <b>${p[0].total}</b></div>
-  <div class="bonusBox"><label style="margin:0">Bonus:</label><input id="bonus-p0" value="${esc(p[0].bonus)}"><button class="tiny primary" onclick="saveBonus(0)">Save</button></div></div>
+  <div class="bonusBox"><label style="margin:0">Correct to:</label><input id="bonus-p0" value="${esc(p[0][field])}"><button class="tiny primary" onclick="saveBonus(0)">Save</button></div></div>
  <div class="scoreCard"><div><b>${esc(p[1].name)}</b> — Total: <b>${p[1].total}</b></div>
-  <div class="bonusBox"><label style="margin:0">Bonus:</label><input id="bonus-p1" value="${esc(p[1].bonus)}"><button class="tiny primary" onclick="saveBonus(1)">Save</button></div></div>`;
+  <div class="bonusBox"><label style="margin:0">Correct to:</label><input id="bonus-p1" value="${esc(p[1][field])}"><button class="tiny primary" onclick="saveBonus(1)">Save</button></div></div>`;
 }
-function saveBonus(pi){state.players[pi].bonus=$("bonus-p"+pi).value;send()}
+function saveBonus(pi){
+ const field=state.mode==="shared"?"sharedScore":"teamScore";
+ state.players[pi][field]=$("bonus-p"+pi).value;
+ send();
+}
+function awardScore(scope,qi,ai,playerIndex){
+ const mark=getQArr(scope)[qi].answers[ai].mark;
+ const n=Number(String(mark).replace(/,/g,""));
+ const field=scope==="shared"?"sharedScore":"teamScore";
+ state.players[playerIndex][field]=(Number(state.players[playerIndex][field])||0)+(Number.isFinite(n)?n:0);
+ send();
+}
 
-function questionCardHTML(scope,qi,q,showAward){
+function questionCardHTML(scope,qi,q){
  const rows=q.answers.map((a,ai)=>{
-  const award=showAward?`<button class="tiny primary" onclick="awardBonus(${qi},${ai},0)">+ ${esc(state.players[0].name)}</button><button class="tiny primary" onclick="awardBonus(${qi},${ai},1)">+ ${esc(state.players[1].name)}</button>`:"";
+  const award=`<button class="tiny primary" onclick="awardScore('${scope}',${qi},${ai},0)">+ ${esc(state.players[0].name)}</button><button class="tiny primary" onclick="awardScore('${scope}',${qi},${ai},1)">+ ${esc(state.players[1].name)}</button>`;
   return `<div class="answer-row"><span class="answer-num">${ai+1}.</span>
    <input id="${idBase(scope,qi,ai)}-text" value="${esc(a.text)}" placeholder="Answer ${ai+1}">
    <input id="${idBase(scope,qi,ai)}-mark" class="mark-input" value="${esc(a.mark)}" placeholder="Mark">
@@ -240,7 +255,7 @@ function renderTeamBoard(){
  const root=$("board");root.innerHTML="";
  state.players.forEach((p,pi)=>{
   const box=document.createElement("div");box.className="panel";
-  box.innerHTML=`<h2>${esc(p.name)}</h2>`+p.questions.map((q,qi)=>questionCardHTML('p'+pi,qi,q,false)).join("");
+  box.innerHTML=`<h2>${esc(p.name)}</h2>`+p.questions.map((q,qi)=>questionCardHTML('p'+pi,qi,q)).join("");
   root.appendChild(box);
  });
 }
@@ -248,7 +263,7 @@ function renderSharedBoard(){
  const root=$("board");root.innerHTML="";
  const box=document.createElement("div");box.className="panel";
  box.innerHTML=`<h2>Shared Board</h2><p style="font-size:13px;color:#475569">Use the "+ ${esc(state.players[0].name)}" / "+ ${esc(state.players[1].name)}" buttons to award that answer's points to a team once it's guessed.</p>`+
-  state.shared.questions.map((q,qi)=>questionCardHTML('shared',qi,q,true)).join("");
+  state.shared.questions.map((q,qi)=>questionCardHTML('shared',qi,q)).join("");
  root.appendChild(box);
 }
 
@@ -263,12 +278,6 @@ function toggleField(scope,qi,ai,field){
  const q=getQArr(scope)[qi];
  const target=ai===undefined?q:q.answers[ai];
  target[field]=!target[field];
- send();
-}
-function awardBonus(qi,ai,playerIndex){
- const mark=state.shared.questions[qi].answers[ai].mark;
- const n=Number(String(mark).replace(/,/g,""));
- state.players[playerIndex].bonus=(Number(state.players[playerIndex].bonus)||0)+(Number.isFinite(n)?n:0);
  send();
 }
 function setMode(mode){state.mode=mode;send()}
@@ -398,7 +407,7 @@ if(!window.ANDROID_OFFLINE_MODE)loadConnectionInfo();
 function defaultState(){
  const mkAnswer=()=>({text:"",mark:"",showAnswer:false,showMark:false});
  const mkQuestion=()=>({question:"",showQuestion:false,answers:Array.from({length:5},mkAnswer)});
- const mkPlayer=name=>({name,questions:Array.from({length:5},mkQuestion),bonus:0,total:0});
+ const mkPlayer=name=>({name,questions:Array.from({length:5},mkQuestion),teamScore:0,sharedScore:0,total:0});
  return {title:"WORD ARENA TV",subtitle:"OFFLINE WORD GAME",mode:"team",
   timer:{running:false,remaining:30,lastStarted:null},gameOver:false,winner:"",image:{data:"",name:""},
   players:[mkPlayer("PLAYER 1"),mkPlayer("PLAYER 2")],shared:{questions:Array.from({length:5},mkQuestion)}};
@@ -511,8 +520,19 @@ function handleVoiceCommand(text){
  if(m=text.match(/^(?:go to |focus )?question\s+(\w+)$/)){const n=parseNumber(m[1]);if(n>=1&&n<=5){setFocus(focus.scope,n-1)}return}
  if(/^next question$/.test(text)){setFocus(focus.scope,Math.min(4,focus.qi+1));return}
  if(/^(?:previous|prev) question$/.test(text)){setFocus(focus.scope,Math.max(0,focus.qi-1));return}
- if(m=text.match(/^show question(?:\s+(\w+))?$/)){const qi=m[1]?parseNumber(m[1])-1:focus.qi;setFocus(focus.scope,qi);setShow(focus.scope,qi,undefined,'showQuestion',true);send();render();return}
- if(/^hide question$/.test(text)){setShow(focus.scope,focus.qi,undefined,'showQuestion',false);send();render();return}
+ if(m=text.match(/^show question(?:\s+(\w+))?$/)){
+  const qi=m[1]?parseNumber(m[1])-1:focus.qi;
+  setFocus(focus.scope,qi);
+  setShow(focus.scope,qi,undefined,'showQuestion',true);
+  for(let ai=0;ai<5;ai++){setShow(focus.scope,qi,ai,'showAnswer',true);setShow(focus.scope,qi,ai,'showMark',true)}
+  send();render();return;
+ }
+ if(m=text.match(/^hide question(?:\s+(\w+))?$/)){
+  const qi=m[1]?parseNumber(m[1])-1:focus.qi;
+  setShow(focus.scope,qi,undefined,'showQuestion',false);
+  for(let ai=0;ai<5;ai++){setShow(focus.scope,qi,ai,'showAnswer',false);setShow(focus.scope,qi,ai,'showMark',false)}
+  send();render();return;
+ }
  if(m=text.match(/^show answer\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showAnswer',true);send();render()}return}
  if(m=text.match(/^hide answer\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showAnswer',false);send();render()}return}
  if(m=text.match(/^show (?:mark|score)\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showMark',true);send();render()}return}
