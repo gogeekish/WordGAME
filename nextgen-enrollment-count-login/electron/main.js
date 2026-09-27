@@ -3,25 +3,46 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 
-function storeDir() {
-  return process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(app.getPath('exe'));
+const STORE_FILENAME = 'nextgen-login-store.json';
+
+// Always-reliable location: tied to the Windows user profile, never affected
+// by a portable .exe's temporary self-extraction folder changing between runs.
+function reliableStorePath() {
+  return path.join(app.getPath('userData'), STORE_FILENAME);
 }
 
-function storeFilePath() {
-  return path.join(storeDir(), 'nextgen-login-store.json');
+// Best-effort location: electron-builder sets this to the folder the portable
+// .exe itself sits in, so a copy of that folder (exe + this file) carries the
+// signed-in state to another computer. Not guaranteed on every setup, so it
+// is only ever a secondary source/target, never the only place we check.
+function portableStorePath() {
+  return process.env.PORTABLE_EXECUTABLE_DIR
+    ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, STORE_FILENAME)
+    : null;
 }
 
 ipcMain.handle('read-activation', async () => {
+  const portablePath = portableStorePath();
+  if (portablePath) {
+    try {
+      return JSON.parse(fs.readFileSync(portablePath, 'utf8'));
+    } catch (e) { /* fall through to the reliable location */ }
+  }
   try {
-    const txt = fs.readFileSync(storeFilePath(), 'utf8');
-    return JSON.parse(txt);
+    return JSON.parse(fs.readFileSync(reliableStorePath(), 'utf8'));
   } catch (e) {
     return null;
   }
 });
 
 ipcMain.handle('write-activation', async (event, data) => {
-  fs.writeFileSync(storeFilePath(), JSON.stringify(data));
+  const json = JSON.stringify(data);
+  fs.mkdirSync(path.dirname(reliableStorePath()), { recursive: true });
+  fs.writeFileSync(reliableStorePath(), json);
+  const portablePath = portableStorePath();
+  if (portablePath) {
+    try { fs.writeFileSync(portablePath, json); } catch (e) { /* best-effort only */ }
+  }
   return true;
 });
 

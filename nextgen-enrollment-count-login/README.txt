@@ -37,7 +37,7 @@ STEP 1 — GET A GMAIL "APP PASSWORD" (one time, ~2 minutes)
 ============================================================
 HOW TO RUN THE WINDOWS VERSION
 ============================================================
-1. Copy "NextGen Enrollment Count (Login Edition) 1.0.0.exe" anywhere on
+1. Copy "NextGen Enrollment Count (Login Edition) 1.0.1.exe" anywhere on
    your Windows computer — it's one single file, nothing else needed.
 2. Double-click it. Windows may show a "protected your PC" warning because
    the app isn't signed by a paid certificate — click "More info" then
@@ -50,7 +50,7 @@ HOW TO RUN THE WINDOWS VERSION
 ============================================================
 HOW TO INSTALL THE ANDROID VERSION
 ============================================================
-1. Copy "NextGenEnrollmentCount-Login-1.0.0.apk" onto your Android phone.
+1. Copy "NextGenEnrollmentCount-Login-1.0.1.apk" onto your Android phone.
 2. Tap it to install. Android will warn it's from "outside the Play Store"
    — tap "Install anyway".
 3. Open "NextGen Enrollment Count" from your home screen and follow the
@@ -73,6 +73,18 @@ NOTES
   still exist and still work exactly as before. Pick whichever fits you.
 - This is a normal single-file Electron .exe (same style as the Offline
   Edition), so there's no second file to keep track of.
+
+VERSION HISTORY
+- 1.0.1 — fixed a bug where the app forgot you were signed in every time
+  it was closed and reopened (it was checking the wrong folder for the
+  saved sign-in file). Also flipped the results table: search words down
+  the first column, months across the top.
+- 1.0.0 — first release (EmailJS-based, later replaced with direct email
+  sending). Superseded by 1.0.1; kept in this project's git history, not
+  in the "dist" folder, since it had the sign-in bug above.
+From here on, each new build of this app keeps its version number (like
+"1.0.1", "1.0.2"...) and old builds stay in "dist" alongside new ones,
+the same way Word Arena TV's versions do.
 
 BUILDING YOUR OWN COPIES (only needed if you change the code)
 - Windows: npm install, then npm run dist (finished file in "dist" folder)
