@@ -1,3 +1,13 @@
-node_modules/
-dist/win-unpacked/
-dist/builder-*.yml
+bin/
+dist/*
+!dist/*.exe
+!dist/*.apk
+!dist/resources.neu
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+
+*.log
+.storage/
+.tmp/

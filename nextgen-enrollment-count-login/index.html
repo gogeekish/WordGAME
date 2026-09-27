@@ -42,75 +42,94 @@
   button.dl{background:var(--accent2);color:#fff;font-weight:800;font-size:14px;padding:10px 22px;border-radius:10px;border:none;cursor:pointer}
   .note{max-width:1200px;margin:20px auto 0;background:#1e293b;border:1px solid var(--line);border-radius:12px;padding:12px 16px;color:#cbd5e1;font-size:12px;line-height:1.6}
 
-  /* gate screens (setup + login) */
   .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .gatecard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px 32px;max-width:420px;width:100%}
-  .gatecard h1{font-size:22px;margin:0 0 6px;text-align:center}
-  .gatecard p.sub{color:var(--sub);font-size:13px;text-align:center;margin:0 0 20px}
+  .gatecard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 30px;max-width:430px;width:100%}
+  .gatecard h1{font-size:21px;margin:0 0 6px;text-align:center}
+  .gatecard p.sub{color:var(--sub);font-size:13px;text-align:center;margin:0 0 16px;line-height:1.5}
   .field{margin-bottom:14px}
   .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:bold;text-transform:uppercase;letter-spacing:.3px}
-  .field input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:15px}
+  .field input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:11px 12px;color:#e2e8f0;font-size:15px}
   .field input:focus{outline:2px solid var(--accent2)}
-  .gatebtn{width:100%;background:var(--accent);color:#04150a;font-weight:900;font-size:16px;padding:13px;border-radius:10px;border:none;cursor:pointer;margin-top:6px}
+  .gatebtn{width:100%;background:var(--accent);color:#04150a;font-weight:900;font-size:15px;padding:12px;border-radius:10px;border:none;cursor:pointer;margin-top:4px}
   .gatebtn:disabled{opacity:.5;cursor:not-allowed}
-  .linkbtn{display:block;text-align:center;margin-top:14px;color:#93c5fd;font-size:13px;cursor:pointer;background:none;border:none}
+  .gatebtn.secondary{background:var(--accent2);color:#fff}
+  .linkbtn{display:block;text-align:center;margin-top:12px;color:#93c5fd;font-size:13px;cursor:pointer;background:none;border:none;text-decoration:underline}
   .gatemsg{text-align:center;margin-top:12px;font-size:13px;min-height:18px}
   .gatemsg.err{color:#f87171}
   .gatemsg.ok{color:#4ade80}
   .topbar{display:none;text-align:right;max-width:1200px;margin:0 auto;padding:10px 24px 0}
   .topbar button{background:none;border:1px solid var(--line);color:var(--sub);font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
   .hidden{display:none !important}
+
+  .skipbox{background:var(--card2);border:1px dashed var(--line);border-radius:12px;padding:12px 14px;margin-bottom:18px}
+  .skipbox .skiplabel{font-size:13px;color:var(--sub);cursor:pointer;text-align:center}
+  .skipbox .skiplabel b{color:var(--accent)}
+  .skipbody{margin-top:10px}
+  .codeinputrow{display:flex;gap:8px}
+  .codeinputrow input{flex:1;text-align:center;font-size:20px;letter-spacing:5px;font-family:Consolas,monospace}
+  .codeinputrow button{background:var(--accent);color:#04150a;font-weight:900;border:none;border-radius:8px;padding:0 16px;cursor:pointer}
+  hr.sep{border:none;border-top:1px solid var(--line);margin:18px 0}
 </style>
 </head>
 <body>
 
-<!-- ============ SETUP SCREEN (first run only) ============ -->
-<div class="gate" id="setupGate">
+<!-- ============ LOGIN / SETUP GATE ============ -->
+<div class="gate" id="loginGate">
   <div class="gatecard">
-    <h1>🔧 One-Time Setup</h1>
-    <p class="sub">This app emails you a login code using a free service called EmailJS, so no password ever needs to be stored here. Paste the 3 codes from your EmailJS account below.</p>
-    <div class="field">
-      <label>EmailJS Service ID</label>
-      <input id="setupServiceId" placeholder="e.g. service_abc1234">
-    </div>
-    <div class="field">
-      <label>EmailJS Template ID</label>
-      <input id="setupTemplateId" placeholder="e.g. template_xyz9876">
-    </div>
-    <div class="field">
-      <label>EmailJS Public Key</label>
-      <input id="setupPublicKey" placeholder="e.g. AbCdEfGhIjKlMnOp">
-    </div>
-    <div class="field">
-      <label>Your Email (codes always go here)</label>
-      <input id="setupRecipient" placeholder="you@example.com" value="ceejay2018@gmail.com">
-    </div>
-    <button class="gatebtn" id="setupSaveBtn">Save Setup</button>
-    <div class="gatemsg" id="setupMsg"></div>
-  </div>
-</div>
 
-<!-- ============ LOGIN SCREEN ============ -->
-<div class="gate hidden" id="loginGate">
-  <div class="gatecard">
-    <h1>🔐 Login Required</h1>
-    <p class="sub">A 6-digit code will be emailed to <b id="loginRecipientLabel"></b></p>
-    <button class="gatebtn" id="sendCodeBtn">Send Code to My Email</button>
-    <div id="codeEntryBlock" class="hidden" style="margin-top:16px">
-      <div class="field">
-        <label>Enter the 6-digit code</label>
-        <input id="otpInput" maxlength="6" inputmode="numeric" placeholder="000000">
+    <div class="skipbox">
+      <div class="skiplabel" id="skipToggle">🔑 Have a code from the <b>NextGen Login Code</b> app? Click here to type it in instead.</div>
+      <div class="skipbody hidden" id="skipBody">
+        <div class="codeinputrow">
+          <input id="skipOtpInput" maxlength="4" inputmode="numeric" placeholder="0000">
+          <button id="skipVerifyBtn">Verify</button>
+        </div>
       </div>
-      <button class="gatebtn" id="verifyBtn">Verify &amp; Continue</button>
     </div>
+
+    <div id="setupSection">
+      <h1>📧 One-Time Email Setup</h1>
+      <p class="sub">This only needs to be done once. The app will send login codes straight to your own inbox — no third-party service, no account signup anywhere else.</p>
+      <div class="field">
+        <label>Your Gmail Address</label>
+        <input id="setupEmail" placeholder="you@gmail.com">
+      </div>
+      <div class="field">
+        <label>Gmail App Password (16 letters)</label>
+        <input id="setupAppPassword" placeholder="abcd efgh ijkl mnop">
+      </div>
+      <button class="gatebtn" id="setupSaveBtn">Save &amp; Send Me a Code</button>
+      <button class="linkbtn" id="showHowToBtn">How do I get an App Password?</button>
+      <div id="howToBox" class="hidden" style="margin-top:10px;font-size:12px;color:var(--sub);line-height:1.6;background:var(--card2);border-radius:10px;padding:10px 12px">
+        1. Go to myaccount.google.com/security<br>
+        2. Turn on "2-Step Verification" if it isn't already on.<br>
+        3. Go to myaccount.google.com/apppasswords<br>
+        4. Type any name (e.g. "NextGen App") and click Create.<br>
+        5. Google shows a 16-letter code — copy it here (spaces don't matter).
+      </div>
+    </div>
+
+    <div id="loginSection" class="hidden">
+      <h1>🔐 Login Required</h1>
+      <p class="sub">A 6-digit code will be emailed to <b id="loginEmailLabel"></b></p>
+      <button class="gatebtn" id="sendCodeBtn">Send Code to My Email</button>
+      <div id="codeEntryBlock" class="hidden" style="margin-top:14px">
+        <div class="field">
+          <label>Enter the 6-digit code</label>
+          <input id="otpInput" maxlength="6" inputmode="numeric" placeholder="000000">
+        </div>
+        <button class="gatebtn" id="verifyBtn">Verify &amp; Continue</button>
+      </div>
+      <button class="linkbtn" id="redoSetupBtn">Change Email Setup</button>
+    </div>
+
     <div class="gatemsg" id="loginMsg"></div>
-    <button class="linkbtn" id="redoSetupBtn">Change Setup</button>
   </div>
 </div>
 
-<!-- ============ MAIN APP (shown after login) ============ -->
+<!-- ============ MAIN APP (shown after activation) ============ -->
 <div id="mainApp" class="hidden">
-<div class="topbar" id="topbar"><button id="logoutBtn">Log Out</button></div>
+<div class="topbar" id="topbar"><button id="resetBtn">Reset Login Setup</button></div>
 <div class="page">
   <div class="top">
     <h1>📊 NextGen Enrollment Count</h1>
@@ -152,157 +171,244 @@
 </div>
 </div>
 
+<script src="/__neutralino_globals.js"></script>
+<script src="js/neutralino.js"></script>
+<script src="vendor/totp-shared.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
 <script>
-/* ===================== SETTINGS STORAGE ===================== */
-const SETTINGS_KEY = 'nextgen_login_settings_v1';
-function loadSettings(){
-  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); } catch(e){ return null; }
-}
-function saveSettings(s){
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e){}
+/* ===================== PLATFORM DETECTION ===================== */
+const IS_NEUTRALINO = typeof Neutralino !== 'undefined';
+const IS_ANDROID = typeof AndroidBridge !== 'undefined';
+
+/* ===================== PERSISTENT STORAGE (survives copying the app folder) ===================== */
+function storePath(){
+  return (window.NL_PATH || '.') + '/nextgen-login-store.json';
 }
 
-const setupGate = document.getElementById('setupGate');
+async function loadStore(){
+  if (IS_NEUTRALINO){
+    try {
+      const txt = await Neutralino.filesystem.readFile(storePath());
+      return JSON.parse(txt);
+    } catch(e){ return null; }
+  }
+  try { return JSON.parse(localStorage.getItem('nextgen_login_store') || 'null'); } catch(e){ return null; }
+}
+
+async function saveStore(data){
+  if (IS_NEUTRALINO){
+    await Neutralino.filesystem.writeFile(storePath(), JSON.stringify(data));
+    return;
+  }
+  localStorage.setItem('nextgen_login_store', JSON.stringify(data));
+}
+
+async function clearStore(){
+  await saveStore({});
+}
+
+/* ===================== OFFLINE 4-DIGIT CODE FALLBACK (same secret as the separate Login Code app) ===================== */
+const SHARED_SECRET = "Ir92ROOE2DLyfXTx0gCtisYWpnIlOu5h";
+const TOTP_STEP = 60;
+const TOTP_DIGITS = 4;
+
+function validOfflineCodesNow(){
+  const now = Math.floor(Date.now() / 1000);
+  return [
+    NextGenTOTP.totp(SHARED_SECRET, TOTP_STEP, TOTP_DIGITS, now - TOTP_STEP),
+    NextGenTOTP.totp(SHARED_SECRET, TOTP_STEP, TOTP_DIGITS, now),
+    NextGenTOTP.totp(SHARED_SECRET, TOTP_STEP, TOTP_DIGITS, now + TOTP_STEP)
+  ];
+}
+
+/* ===================== SENDING THE EMAIL DIRECTLY (no third-party service) ===================== */
+function psEscape(s){
+  return String(s).replace(/'/g, "''");
+}
+
+async function sendOtpEmailWindows(toEmail, fromEmail, appPassword, code){
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    "$pass = ConvertTo-SecureString '" + psEscape(appPassword) + "' -AsPlainText -Force",
+    "$cred = New-Object System.Management.Automation.PSCredential('" + psEscape(fromEmail) + "', $pass)",
+    "Send-MailMessage -From '" + psEscape(fromEmail) + "' -To '" + psEscape(toEmail) + "' -Subject 'Your NextGen Enrollment Count login code' -Body 'Your login code is: " + psEscape(code) + "' -SmtpServer 'smtp.gmail.com' -Port 587 -UseSsl -Credential $cred"
+  ].join('\n');
+  const result = await Neutralino.os.execCommand('powershell -NoProfile -NonInteractive -Command -', { stdIn: script });
+  if (result.exitCode !== 0){
+    throw new Error(result.stdErr || result.stdOut || ('PowerShell exit code ' + result.exitCode));
+  }
+}
+
+function sendOtpEmailAndroid(toEmail, fromEmail, appPassword, code){
+  return new Promise((resolve, reject) => {
+    window.onNextGenEmailSent = () => { resolve(); };
+    window.onNextGenEmailFailed = (m) => { reject(new Error(m)); };
+    AndroidBridge.sendEmail(fromEmail, appPassword, toEmail, 'Your NextGen Enrollment Count login code', 'Your login code is: ' + code);
+  });
+}
+
+async function sendOtpEmail(toEmail, fromEmail, appPassword, code){
+  if (IS_NEUTRALINO) return sendOtpEmailWindows(toEmail, fromEmail, appPassword, code);
+  if (IS_ANDROID) return sendOtpEmailAndroid(toEmail, fromEmail, appPassword, code);
+  throw new Error('Sending email only works in the Windows or Android app.');
+}
+
+/* ===================== GATE UI ===================== */
 const loginGate = document.getElementById('loginGate');
 const mainApp = document.getElementById('mainApp');
 const topbar = document.getElementById('topbar');
+const setupSection = document.getElementById('setupSection');
+const loginSection = document.getElementById('loginSection');
+const loginMsg = document.getElementById('loginMsg');
 
-function showOnly(el){
-  [setupGate, loginGate, mainApp].forEach(x => x.classList.add('hidden'));
-  topbar.style.display = 'none';
-  el.classList.remove('hidden');
-}
-
-function boot(){
-  const s = loadSettings();
-  if (!s || !s.serviceId || !s.templateId || !s.publicKey || !s.recipient){
-    showOnly(setupGate);
-    return;
-  }
-  if (sessionStorage.getItem('nextgen_logged_in') === 'yes'){
-    showOnly(mainApp);
-    topbar.style.display = 'block';
-    return;
-  }
-  document.getElementById('loginRecipientLabel').textContent = s.recipient;
-  showOnly(loginGate);
-}
-
-/* ===================== SETUP SCREEN ===================== */
-document.getElementById('setupSaveBtn').addEventListener('click', () => {
-  const serviceId = document.getElementById('setupServiceId').value.trim();
-  const templateId = document.getElementById('setupTemplateId').value.trim();
-  const publicKey = document.getElementById('setupPublicKey').value.trim();
-  const recipient = document.getElementById('setupRecipient').value.trim();
-  const msg = document.getElementById('setupMsg');
-  if (!serviceId || !templateId || !publicKey || !recipient){
-    msg.className = 'gatemsg err';
-    msg.textContent = 'Please fill in all 4 boxes.';
-    return;
-  }
-  if (!/^\S+@\S+\.\S+$/.test(recipient)){
-    msg.className = 'gatemsg err';
-    msg.textContent = 'That email address does not look right.';
-    return;
-  }
-  saveSettings({ serviceId, templateId, publicKey, recipient });
-  msg.className = 'gatemsg ok';
-  msg.textContent = 'Saved! Loading login screen...';
-  setTimeout(boot, 500);
-});
-
-/* ===================== LOGIN SCREEN ===================== */
+let store = null;
 let currentOtp = null;
 let otpExpiresAt = 0;
 
-function genOtp(){
-  return String(Math.floor(100000 + Math.random() * 900000));
+async function boot(){
+  store = await loadStore();
+  if (store && store.activated){
+    loginGate.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    topbar.style.display = 'block';
+    return;
+  }
+  mainApp.classList.add('hidden');
+  topbar.style.display = 'none';
+  loginGate.classList.remove('hidden');
+
+  if (store && store.email && store.appPassword){
+    setupSection.classList.add('hidden');
+    loginSection.classList.remove('hidden');
+    document.getElementById('loginEmailLabel').textContent = store.email;
+  } else {
+    setupSection.classList.remove('hidden');
+    loginSection.classList.add('hidden');
+  }
 }
 
+async function activateAndEnter(){
+  const s = store || {};
+  s.activated = true;
+  await saveStore(s);
+  store = s;
+  loginMsg.className = 'gatemsg ok';
+  loginMsg.textContent = "You're in! This device won't ask again.";
+  setTimeout(boot, 400);
+}
+
+/* ---- skip-to-offline-code box (always available, top of screen) ---- */
+document.getElementById('skipToggle').addEventListener('click', () => {
+  document.getElementById('skipBody').classList.toggle('hidden');
+});
+document.getElementById('skipVerifyBtn').addEventListener('click', async () => {
+  const entered = document.getElementById('skipOtpInput').value.trim();
+  if (!/^\d{4}$/.test(entered)){
+    loginMsg.className = 'gatemsg err';
+    loginMsg.textContent = 'Please type the 4-digit code from the Login Code app.';
+    return;
+  }
+  if (validOfflineCodesNow().includes(entered)){
+    await activateAndEnter();
+  } else {
+    loginMsg.className = 'gatemsg err';
+    loginMsg.textContent = 'That code is not right or has expired.';
+  }
+});
+
+/* ---- setup screen ---- */
+document.getElementById('showHowToBtn').addEventListener('click', () => {
+  document.getElementById('howToBox').classList.toggle('hidden');
+});
+
+document.getElementById('setupSaveBtn').addEventListener('click', async () => {
+  const email = document.getElementById('setupEmail').value.trim();
+  const appPassword = document.getElementById('setupAppPassword').value.trim().replace(/\s+/g, '');
+  if (!/^\S+@\S+\.\S+$/.test(email)){
+    loginMsg.className = 'gatemsg err';
+    loginMsg.textContent = 'Please enter a valid email address.';
+    return;
+  }
+  if (appPassword.length < 12){
+    loginMsg.className = 'gatemsg err';
+    loginMsg.textContent = 'That app password looks too short — copy the full 16-letter code.';
+    return;
+  }
+  store = { email, appPassword, activated: false };
+  await saveStore(store);
+  setupSection.classList.add('hidden');
+  loginSection.classList.remove('hidden');
+  document.getElementById('loginEmailLabel').textContent = email;
+  document.getElementById('sendCodeBtn').click();
+});
+
+/* ---- login screen (send / verify) ---- */
 document.getElementById('sendCodeBtn').addEventListener('click', async () => {
-  const s = loadSettings();
   const btn = document.getElementById('sendCodeBtn');
-  const msg = document.getElementById('loginMsg');
-  msg.className = 'gatemsg';
-  msg.textContent = '';
+  loginMsg.className = 'gatemsg';
+  loginMsg.textContent = '';
   btn.disabled = true;
   btn.textContent = 'Sending...';
 
-  currentOtp = genOtp();
-  otpExpiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+  currentOtp = String(Math.floor(100000 + Math.random() * 900000));
+  otpExpiresAt = Date.now() + 10 * 60 * 1000;
 
   try {
-    const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: s.serviceId,
-        template_id: s.templateId,
-        user_id: s.publicKey,
-        template_params: {
-          to_email: s.recipient,
-          otp_code: currentOtp
-        }
-      })
-    });
-    if (!resp.ok){
-      const body = await resp.text().catch(() => '');
-      throw new Error('EmailJS said: ' + resp.status + ' ' + body);
-    }
-    msg.className = 'gatemsg ok';
-    msg.textContent = 'Code sent! Check your email (it can take a minute).';
+    await sendOtpEmail(store.email, store.email, store.appPassword, currentOtp);
+    loginMsg.className = 'gatemsg ok';
+    loginMsg.textContent = 'Code sent! Check your email (it can take a minute).';
     document.getElementById('codeEntryBlock').classList.remove('hidden');
     btn.textContent = 'Resend Code';
   } catch (err){
-    msg.className = 'gatemsg err';
-    msg.textContent = 'Could not send the email. Check your internet connection and Setup codes. (' + err.message + ')';
+    loginMsg.className = 'gatemsg err';
+    loginMsg.textContent = 'Could not send the email. Check your internet connection and app password. (' + err.message + ')';
     btn.textContent = 'Send Code to My Email';
   }
   btn.disabled = false;
 });
 
-document.getElementById('verifyBtn').addEventListener('click', () => {
-  const msg = document.getElementById('loginMsg');
+document.getElementById('verifyBtn').addEventListener('click', async () => {
   const entered = document.getElementById('otpInput').value.trim();
   if (!currentOtp){
-    msg.className = 'gatemsg err';
-    msg.textContent = 'Please click "Send Code" first.';
+    loginMsg.className = 'gatemsg err';
+    loginMsg.textContent = 'Please click "Send Code" first.';
     return;
   }
   if (Date.now() > otpExpiresAt){
-    msg.className = 'gatemsg err';
-    msg.textContent = 'That code expired. Please send a new one.';
+    loginMsg.className = 'gatemsg err';
+    loginMsg.textContent = 'That code expired. Please send a new one.';
     return;
   }
   if (entered !== currentOtp){
-    msg.className = 'gatemsg err';
-    msg.textContent = 'That code is not right. Please try again.';
+    loginMsg.className = 'gatemsg err';
+    loginMsg.textContent = 'That code is not right. Please try again.';
     return;
   }
-  sessionStorage.setItem('nextgen_logged_in', 'yes');
-  msg.className = 'gatemsg ok';
-  msg.textContent = 'Logged in!';
-  setTimeout(boot, 300);
+  await activateAndEnter();
 });
 
-document.getElementById('redoSetupBtn').addEventListener('click', () => {
-  showOnly(setupGate);
+document.getElementById('redoSetupBtn').addEventListener('click', async () => {
+  await clearStore();
+  store = null;
+  await boot();
 });
 
-document.getElementById('logoutBtn').addEventListener('click', () => {
-  sessionStorage.removeItem('nextgen_logged_in');
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  await clearStore();
+  store = null;
   currentOtp = null;
-  document.getElementById('otpInput').value = '';
-  document.getElementById('codeEntryBlock').classList.add('hidden');
-  document.getElementById('sendCodeBtn').textContent = 'Send Code to My Email';
-  document.getElementById('loginMsg').textContent = '';
-  boot();
+  await boot();
 });
 
-boot();
+if (IS_NEUTRALINO){
+  Neutralino.init();
+  Neutralino.events.on('windowClose', () => Neutralino.app.exit());
+  boot();
+} else {
+  boot();
+}
 
-/* ===================== COUNTING TOOL (same logic as offline edition) ===================== */
+/* ===================== COUNTING TOOL (same logic as other editions) ===================== */
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DATE_RE = /(\d{1,2})-([A-Za-z]{3})-(\d{4})/;
 
