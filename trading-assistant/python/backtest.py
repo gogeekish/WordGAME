@@ -1,12 +1,27 @@
-"""Backtest harness - replays each strategy against REAL historical
-candles fetched from Yahoo Finance's public chart API, and simulates
-whether the stop loss or take profit would have been hit first. This
-never touches a broker; it only replays history to measure how a
-strategy would have performed.
+"""Backtest harness - replays each strategy against real historical
+candles and simulates whether the stop loss or take profit would have
+been hit first. This never touches a broker; it only replays history
+to measure how a strategy would have performed.
 
-Data note: Yahoo Finance doesn't carry the retail XAUUSD CFD feed, so
-this uses GC=F (COMEX Gold futures) as a close, highly liquid proxy -
-prices track XAUUSD closely but are not identical tick for tick.
+Two ways to get candles:
+
+1. load_mt5_csv() - THE RECOMMENDED WAY for XAUUSD specifically. Yahoo
+   Finance and this session's other free data sources do not carry the
+   retail XAUUSD spot/CFD feed at all (confirmed by hand - Yahoo has no
+   XAUUSD=X or XAU=X ticker, and the FMP forex/commodity endpoints need
+   a paid plan). Your MetaTrader 5 terminal already has your broker's
+   real XAUUSD price history sitting in it. Export it and point this
+   at the file:
+     In MT5: open an XAUUSD chart -> right-click -> "Save As" (or
+     View > History Center) -> save as .csv.
+   That is your actual broker's feed - more correct than any proxy.
+
+2. fetch_yahoo_candles() - a quick, no-setup sanity check using GC=F
+   (COMEX Gold futures), since Yahoo has no real XAUUSD ticker. Futures
+   track spot gold closely but are NOT identical: different trading
+   hours, a small futures/spot basis, occasional contract-roll jumps.
+   Use this to poke at an idea quickly; use load_mt5_csv() before
+   drawing any real conclusion about XAUUSD specifically.
 
 Simulation assumption: when a single candle's range touches BOTH the
 stop loss and the take profit, the stop loss is assumed to hit first
@@ -14,10 +29,11 @@ stop loss and the take profit, the stop loss is assumed to hit first
 happened tick by tick inside that candle).
 
 This is a small sample backtest for a sanity check, not a rigorous
-strategy evaluation - a handful of days of 15-minute candles is nowhere
-near enough data to judge whether a strategy actually has an edge.
+strategy evaluation - a handful of days of candles is nowhere near
+enough data to judge whether a strategy actually has an edge.
 """
 
+import csv
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -70,6 +86,55 @@ def fetch_yahoo_candles(
             candles.append(candle_cls(time_label, o, h, l, c))
         except ValueError:
             continue  # skip any bar whose OHLC values fail validation
+
+    return candles
+
+
+def load_mt5_csv(path: str, candle_cls: Type[CandleT]) -> List[CandleT]:
+    """Loads real candles exported from MetaTrader 5 (your broker's
+    actual XAUUSD feed - see the module docstring for how to export
+    one). Accepts MT5's standard export layout:
+
+        <DATE>  <TIME>  <OPEN>  <HIGH>  <LOW>  <CLOSE>  <TICKVOL>  <VOL>  <SPREAD>
+        2026.09.22  00:00:00  4315.20  4318.50  4313.10  4317.80  245  0  12
+
+    Tab or comma separated, header row optional, TICKVOL/VOL/SPREAD
+    columns ignored if present. Rows that fail to parse (wrong column
+    count, non-numeric price, or an invalid OHLC combination) are
+    skipped and counted rather than crashing the whole load, since a
+    hand-exported file occasionally has a stray blank line."""
+    candles: List[CandleT] = []
+    skipped = 0
+
+    with open(path, newline="") as f:
+        sniffer_sample = f.read(2048)
+        f.seek(0)
+        dialect = csv.excel_tab if "\t" in sniffer_sample else csv.excel
+        reader = csv.reader(f, dialect=dialect)
+
+        for row in reader:
+            if not row:
+                continue  # blank line
+            first_cell = row[0].strip().upper()
+            if first_cell.startswith("<DATE") or first_cell == "DATE":
+                continue  # header row (MT5's "<DATE>" style or a plain "Date" column)
+            if len(row) < 6:
+                skipped += 1
+                continue
+
+            date_str, time_str, o_str, h_str, l_str, c_str = row[:6]
+            try:
+                time_label = f"{date_str.strip().replace('.', '-')} {time_str.strip()}"
+                o, h, l, c = float(o_str), float(h_str), float(l_str), float(c_str)
+                candles.append(candle_cls(time_label, o, h, l, c))
+            except ValueError:
+                skipped += 1
+                continue
+
+    if skipped:
+        print(f"load_mt5_csv: skipped {skipped} unparseable row(s) in {path}")
+    if not candles:
+        raise ValueError(f"No valid candles loaded from {path} - check the file format")
 
     return candles
 
@@ -182,19 +247,32 @@ def summarize(results: List[TradeResult]) -> None:
 
 
 if __name__ == "__main__":
-    SYMBOL = "GC=F"     # COMEX Gold futures - proxy for XAUUSD, see module docstring
-    RANGE = "5d"
-    INTERVAL = "15m"
+    import sys
 
-    print(f"Fetching real {INTERVAL} candles for {SYMBOL} ({RANGE}) from Yahoo Finance...")
-    try:
-        candles_s1 = fetch_yahoo_candles(s1.Candle, SYMBOL, RANGE, INTERVAL)
-        candles_s2 = fetch_yahoo_candles(s2.Candle, SYMBOL, RANGE, INTERVAL)
-    except Exception as exc:
-        print(f"Could not fetch real market data ({exc}). No backtest run.")
-        raise SystemExit(1)
+    if len(sys.argv) > 1:
+        # python3 backtest.py path/to/your_mt5_export.csv
+        csv_path = sys.argv[1]
+        print(f"Loading real candles from your MT5 export: {csv_path}")
+        try:
+            candles_s1 = load_mt5_csv(csv_path, s1.Candle)
+            candles_s2 = load_mt5_csv(csv_path, s2.Candle)
+        except (OSError, ValueError) as exc:
+            print(f"Could not load {csv_path} ({exc}). No backtest run.")
+            raise SystemExit(1)
+    else:
+        SYMBOL = "GC=F"     # COMEX Gold futures - proxy for XAUUSD, see module docstring
+        RANGE = "5d"
+        INTERVAL = "15m"
+        print(f"No CSV path given - fetching {INTERVAL} candles for {SYMBOL} ({RANGE}) from Yahoo Finance instead.")
+        print("(For real XAUUSD: python3 backtest.py path/to/your_mt5_export.csv)")
+        try:
+            candles_s1 = fetch_yahoo_candles(s1.Candle, SYMBOL, RANGE, INTERVAL)
+            candles_s2 = fetch_yahoo_candles(s2.Candle, SYMBOL, RANGE, INTERVAL)
+        except Exception as exc:
+            print(f"Could not fetch real market data ({exc}). No backtest run.")
+            raise SystemExit(1)
 
-    print(f"Got {len(candles_s1)} candles, from {candles_s1[0].time} to {candles_s1[-1].time} (UTC).\n")
+    print(f"Got {len(candles_s1)} candles, from {candles_s1[0].time} to {candles_s1[-1].time}.\n")
 
     stop_distance = average_range(candles_s1) * 1.5
     print(f"Using stop_distance = {stop_distance:.2f} (1.5x the average 15-minute candle range).\n")

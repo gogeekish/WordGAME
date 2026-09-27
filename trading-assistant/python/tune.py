@@ -26,6 +26,7 @@ from backtest import (
     backtest_strategy2,
     backtest_strategy3,
     fetch_yahoo_candles,
+    load_mt5_csv,
 )
 
 
@@ -127,9 +128,19 @@ def evaluate_on_test(label: str, backtest_fn: Callable, test_candles: list, para
 
 
 if __name__ == "__main__":
-    print("Fetching 60 days of real 15-minute GC=F candles from Yahoo Finance...")
-    all_s1 = fetch_yahoo_candles(s1.Candle, "GC=F", "60d", "15m")
-    all_s2 = fetch_yahoo_candles(s2.Candle, "GC=F", "60d", "15m")
+    import sys
+
+    if len(sys.argv) > 1:
+        # python3 tune.py path/to/your_mt5_export.csv
+        csv_path = sys.argv[1]
+        print(f"Loading real candles from your MT5 export: {csv_path}")
+        all_s1 = load_mt5_csv(csv_path, s1.Candle)
+        all_s2 = load_mt5_csv(csv_path, s2.Candle)
+    else:
+        print("No CSV path given - fetching 60 days of 15-minute GC=F candles from Yahoo Finance instead.")
+        print("(For real XAUUSD: python3 tune.py path/to/your_mt5_export.csv)")
+        all_s1 = fetch_yahoo_candles(s1.Candle, "GC=F", "60d", "15m")
+        all_s2 = fetch_yahoo_candles(s2.Candle, "GC=F", "60d", "15m")
 
     train_s1, test_s1 = split_train_test(all_s1)
     train_s2, test_s2 = split_train_test(all_s2)

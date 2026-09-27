@@ -17,7 +17,7 @@ from typing import List, Optional
 
 import strategy1_sweep_wick as s1
 import strategy3_wick_sweep_after as s3
-from backtest import average_range, fetch_yahoo_candles, simulate_outcome
+from backtest import average_range, fetch_yahoo_candles, load_mt5_csv, simulate_outcome
 from levels import fixed_distance_levels
 from tune import score, split_train_test
 
@@ -93,8 +93,18 @@ def report_row(label: str, results: list) -> None:
 
 
 if __name__ == "__main__":
-    print("Fetching 60 days of real 15-minute GC=F candles from Yahoo Finance...")
-    all_candles = fetch_yahoo_candles(s1.Candle, "GC=F", "60d", "15m")
+    import sys
+
+    if len(sys.argv) > 1:
+        # python3 trend_filter_test.py path/to/your_mt5_export.csv
+        csv_path = sys.argv[1]
+        print(f"Loading real candles from your MT5 export: {csv_path}")
+        all_candles = load_mt5_csv(csv_path, s1.Candle)
+    else:
+        print("No CSV path given - fetching 60 days of 15-minute GC=F candles from Yahoo Finance instead.")
+        print("(For real XAUUSD: python3 trend_filter_test.py path/to/your_mt5_export.csv)")
+        all_candles = fetch_yahoo_candles(s1.Candle, "GC=F", "60d", "15m")
+
     train, test = split_train_test(all_candles)
     print(f"Train: {len(train)} candles ({train[0].time} to {train[-1].time})")
     print(f"Test:  {len(test)} candles ({test[0].time} to {test[-1].time})\n")
