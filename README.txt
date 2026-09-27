@@ -71,13 +71,14 @@ in by hand. Always glance over the filled-in boxes afterward in case a word
 or number landed in the wrong spot.
 
 GAME STRUCTURE
-There are now 4 PLAYERS (not just 2), each with their own name in Game
-Settings. There are two board modes, switchable any time:
+There are THREE board modes, switchable any time from Game Settings:
 
-- TEAM MODE (default): each of the 4 players has their own 5 questions.
-- SHARED MODE: one shared board of 5 questions that everyone competes on.
+- TEAM MODE (default): 2 players, each with their own 5 questions.
+- SHARED MODE: 1 shared board of 5 questions both players compete on.
+- MULTIPLAYER: a simple 4-player scoreboard, with no questions at all —
+  see below.
 
-Each question has:
+Each Team Mode / Shared Mode question has:
 - 1 Question box
 - 5 Answer boxes, each with its own Mark (points) box
 
@@ -85,61 +86,28 @@ EVERY QUESTION AND EVERY ANSWER/MARK HAS ITS OWN SHOW/HIDE BUTTON.
 Only items marked Show appear on the public screen. Showing/hiding is purely
 visual — it does NOT change anyone's score by itself.
 
-PLAYERS ARE HIDDEN UNTIL YOU CLICK "SHOW PLAYER"
-A brand new player never appears on the projector screen — not even their
-name or box — until you click "Show Player" for them in the Scoreboard
-panel. This lets you run a 1, 2, 3, or 4-player game just by showing however
-many you're actually using; the rest stay completely off-screen. You can
-still type in questions/answers and edit a hidden player any time — hiding
-only affects the public/projector screen.
-
-SCORING — TWO SEPARATE GAMES
-Team Mode and the Shared Board are treated as two completely separate games
-with their own scores; switching between them never mixes or resets either
-one. Every answer, in both Team Mode and the Shared Board, has a
+SCORING — THREE SEPARATE GAMES
+Team Mode, the Shared Board, and Multiplayer are treated as three completely
+separate games with their own scores; switching between them never mixes or
+resets any of them. In Team Mode and the Shared Board, every answer has a
 "+ [Player Name]" button for each player next to it — click one to award
 that answer's points to whoever actually got it right (this also lets a
 player "steal" a point from a question that isn't their own, if you want
 that). You can also correct a score by hand any time using the "Correct to"
 box in the Scoreboard panel.
 
-QUICK-ADD SCORE BUTTONS
-Above each player's card in the Scoreboard panel there are 3 quick-add
-buttons (they start as +10, +5, +1). Click one to instantly add that many
-points to that player, no typing needed — handy for games that aren't
-based on the Question/Answer boards at all. You can change what the 3
-numbers are any time: type new numbers into the 3 boxes above the buttons
-and click Save — the buttons relabel themselves to match, for every
-player, right away. The manual "Correct to" box is still there too, for
-any other number.
-
-VOICE CONTROL (admin page, host computer, Chrome browser only)
-Click "Start Listening" on the Voice Control panel, then say things like:
-- "team 1" through "team 4" (or "player 1" through "player 4") / "shared board" — choose which board to control
-- "question 1" through "question 5" — jump to that question
-- "next question" / "previous question"
-- "show question" (or "show question 1" through "show question 5") —
-  reveal EVERYTHING for that question: the question, all 5 answers, all
-  5 points, all at once
-- "hide question" (or "hide question 1" through "5") — hide everything for
-  that question
-- "show answer 1" through "show answer 5" — reveal just that one answer
-- "hide answer 1" through "hide answer 5"
-- "show mark 1" through "show mark 5" (also accepts "score") — reveal just
-  that one answer's points
-- "hide mark 1" through "hide mark 5"
-- "show all" / "hide all" — same as "show/hide question" for whichever
-  question is currently focused
-- "start timer" / "pause timer" / "reset timer"
-Remember: revealing something with voice control (or the Show/Hide buttons)
-only makes it visible on screen — it does not award any points. Use the
-"+ Player" buttons (or say a future voice command, if you add one) to
-actually add points to a score.
-Voice control needs a real microphone and only works reliably on the
-computer actually running Chrome locally (http://localhost:3000/admin.html).
-Browsers block microphone access on a plain http://COMPUTER-IP address for
-security reasons, so voice control won't work from a phone over Wi-Fi unless
-you set up HTTPS separately.
+MULTIPLAYER MODE — 4 players, hidden until shown, quick-add scoring
+Multiplayer is a separate tab with its own 4 players (its own names, not
+shared with Team Mode's 2 players) and no questions/answers at all — just a
+scoreboard. A brand new player never appears on the projector screen at all
+until you click "Show Player" for them, so you can run a 1, 2, 3, or 4-player
+game just by showing however many you're using. Above each player's card
+there are 3 quick-add buttons (they start as +10, +5, +1) — click one to
+instantly add that many points, no typing needed. Change what the 3 numbers
+are any time: type new numbers into the boxes above the buttons and click
+Save — every player's buttons relabel to match immediately. A manual
+"Correct to" box is there too, for any other number, and you can rename
+each player right on their card.
 
 ============================================================
 ANDROID PHONE APP (prepare questions on your phone, even offline)
@@ -160,18 +128,20 @@ HOW TO INSTALL IT ON YOUR PHONE
 HOW TO USE IT
 1. Type in your questions, answers and scores any time — before or after
    connecting to WiFi. Nothing is shown on the projector from the phone
-   app; it just saves your work on the phone until you send it over.
+   app; it just saves your work on the phone until you connect.
 2. When you get to the venue, connect your phone to the SAME WiFi as the
    computer running the game.
 3. Tap "Find Game Computer" — the app searches the WiFi automatically.
-4. Once it says "Found the game computer...", tap "Sync Now — Send My
-   Questions". Everything you typed gets sent to the computer immediately.
-5. Keep using the regular Admin screen on the computer (or a browser) to
-   run the actual show — Show/Hide buttons, the timer, voice control, etc.
-   The phone app is just for typing things in ahead of time and sending
-   them over; it is not a remote control during the live show.
-6. The "Connection Info" box (also on the regular Admin screen) shows the
-   exact address to type into the projector's browser.
+4. Once it says "Found the game computer...", tap "Connect & Sync".
+   Everything you typed gets sent to the computer immediately, AND the
+   phone STAYS connected from then on — it becomes a full live remote
+   control. Every button (Show/Hide, Timer, scores, mode switch) now acts
+   on the live game instantly, exactly like using the Admin screen on the
+   computer itself.
+5. The "Connection Info" box shows the exact address to type into the
+   projector's browser.
+6. If the phone loses WiFi mid-show, it automatically reconnects once
+   back in range; tap "Connect & Sync" again if it doesn't pick back up.
 
 Auto-search works by the phone shouting "is anyone there?" on the WiFi and
 the game computer answering back — this needs both devices on the same

@@ -16,7 +16,7 @@ input,textarea,button{font:inherit}input,textarea{width:100%;padding:10px;border
 button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bold}
 .primary{background:#2563eb;color:white}.green{background:#16a34a;color:white}.red{background:#dc2626;color:white}.gray{background:#64748b;color:white}.orange{background:#ea580c;color:white}
 .modebtn.active{background:#16a34a;color:white}.modebtn{background:#cbd5e1;color:#111}
-.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.section{border:1px solid #dbe2ea;border-radius:12px;padding:14px;margin-top:12px;outline-offset:2px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.section{border:1px solid #dbe2ea;border-radius:12px;padding:14px;margin-top:12px}
 .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin:10px 0}.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .showbtn{background:#0f766e;color:white}.hidebtn{background:#475569;color:white}.tiny{padding:6px 10px;font-size:12px}
@@ -26,7 +26,6 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 .answer-num{font-weight:bold;font-size:12px;color:#475569;min-width:18px}
 .scoreCard{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;border:1px solid #dbe2ea;border-radius:12px;padding:12px;margin-top:10px}
 .scoreCard .bonusBox{display:flex;gap:6px;align-items:center}.scoreCard .bonusBox input{width:90px}
-#voiceLog{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
 @media(max-width:800px){.grid{grid-template-columns:1fr}header{position:relative}}
 </style>
 </head>
@@ -40,8 +39,6 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 <div><label>Subtitle</label><input id="subtitle"></div>
 <div><label>Player 1</label><input id="p1"></div>
 <div><label>Player 2</label><input id="p2"></div>
-<div><label>Player 3</label><input id="p3"></div>
-<div><label>Player 4</label><input id="p4"></div>
 </div>
 <div class="controls">
 <button class="primary" onclick="save()">Save Settings</button>
@@ -53,6 +50,7 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 <b style="align-self:center">Board Mode:</b>
 <button class="modebtn" id="modeTeamBtn" onclick="setMode('team')">Team Mode — each player has their own 5 questions</button>
 <button class="modebtn" id="modeSharedBtn" onclick="setMode('shared')">Shared Mode — one board of 5 questions, award points by hand</button>
+<button class="modebtn" id="modeMultiplayerBtn" onclick="setMode('multiplayer')">Multiplayer — 4 players, quick-add scoring</button>
 </div>
 </div>
 
@@ -63,11 +61,11 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 
 <div class="panel" id="syncPanel" style="display:none">
 <h2>📶 Game Computer Connection</h2>
-<p style="font-size:13px;color:#475569;margin-top:0">Make sure this phone is on the same WiFi as the computer running the game, then tap "Find Game Computer". You can keep typing questions even before you find it — nothing is lost.</p>
+<p style="font-size:13px;color:#475569;margin-top:0">Make sure this phone is on the same WiFi as the computer running the game, then tap "Find Game Computer". You can keep typing questions even before you find it — nothing is lost. Once connected, this phone becomes a live remote control — every button below acts on the game immediately.</p>
 <div id="syncStatus" style="font-weight:bold;margin-bottom:8px">📴 Not connected — editing offline</div>
 <div class="controls">
 <button class="primary" onclick="discoverServer()">Find Game Computer</button>
-<button class="green" id="syncNowBtn" onclick="syncNow()" disabled>Sync Now — Send My Questions</button>
+<button class="green" id="syncNowBtn" onclick="syncNow()" disabled>Connect &amp; Sync</button>
 </div>
 <div id="foundServerLabel" style="margin-top:8px;font-size:13px;color:#475569"></div>
 </div>
@@ -86,8 +84,6 @@ School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
 <select id="bulkTarget" style="max-width:220px">
 <option value="p0">Player 1 questions</option>
 <option value="p1">Player 2 questions</option>
-<option value="p2">Player 3 questions</option>
-<option value="p3">Player 4 questions</option>
 <option value="shared">Shared Board questions</option>
 </select>
 </div>
@@ -124,49 +120,9 @@ School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
 </div>
 </div>
 
-<div class="panel" id="voicePanel">
-<h2>🎤 Voice Control (use on this host computer, in Chrome)</h2>
-<div class="controls">
-<button class="green" id="voiceBtn" onclick="toggleListening()">Start Listening</button>
-<span id="voiceStatus" style="align-self:center;font-size:13px;color:#475569">Not listening</span>
-</div>
-<div class="controls">
-<b style="align-self:center">Focus:</b>
-<button class="gray tiny" onclick="setFocus('p0',focus.qi)">Player 1</button>
-<button class="gray tiny" onclick="setFocus('p1',focus.qi)">Player 2</button>
-<button class="gray tiny" onclick="setFocus('p2',focus.qi)">Player 3</button>
-<button class="gray tiny" onclick="setFocus('p3',focus.qi)">Player 4</button>
-<button class="gray tiny" id="sharedFocusBtn" onclick="setFocus('shared',focus.qi)">Shared Board</button>
-</div>
-<div class="controls">
-<b style="align-self:center">Question:</b>
-<button class="gray tiny" onclick="setFocus(focus.scope,0)">1</button>
-<button class="gray tiny" onclick="setFocus(focus.scope,1)">2</button>
-<button class="gray tiny" onclick="setFocus(focus.scope,2)">3</button>
-<button class="gray tiny" onclick="setFocus(focus.scope,3)">4</button>
-<button class="gray tiny" onclick="setFocus(focus.scope,4)">5</button>
-</div>
-<div style="margin-top:8px;font-weight:bold">Currently controlling: <span id="focusLabel">PLAYER 1 — Question 1</span></div>
-<div id="voiceLog" style="margin-top:8px;font-size:12px;color:#475569;max-height:90px;overflow:auto">Say a command after clicking "Start Listening"…</div>
-<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:bold">Voice command list</summary>
-<div style="font-size:13px;line-height:1.7;margin-top:6px">
-"team 1" through "team 4" (or "player 1" through "player 4") / "shared board" — switch which board you're controlling<br>
-"question 1" through "question 5" — jump to that question<br>
-"next question" / "previous question"<br>
-"show question" / "show question 1" through "show question 5" — reveal EVERYTHING for that question (the question, all 5 answers, all 5 points)<br>
-"hide question" / "hide question 1" through "hide question 5" — hide everything for that question<br>
-"show answer 1" through "show answer 5" — reveal just that one answer<br>
-"hide answer 1" through "hide answer 5"<br>
-"show mark 1" (or "show score 1") through "show mark 5" — reveal just that one answer's points<br>
-"hide mark 1" through "hide mark 5"<br>
-"show all" / "hide all" — same as "show question" / "hide question" for the current question<br>
-"start timer" / "pause timer" / "reset timer"
-</div>
-</details>
-</div>
-
 <div class="panel" id="scorePanel"></div>
 <div id="board"></div>
+<div class="panel" id="multiplayerPanel" style="display:none"></div>
 
 <div class="panel">
 <h2>Corner Image</h2>
@@ -182,7 +138,7 @@ School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
 const $=id=>document.getElementById(id);
 let socket,state;
 if(window.ANDROID_OFFLINE_MODE){
- socket={emit(){},on(){},close(){},connected:false}; // no live connection until "Sync Now" is pressed
+ socket={emit(){},on(){},close(){},connected:false}; // no live connection until "Connect & Sync" is pressed
 } else {
  socket=io();
  socket.on("connect",()=>$("conn").textContent="Connected to offline LAN server");
@@ -207,48 +163,35 @@ function render(){
  $("timer").textContent=formatTime(state.timer.remaining);
  $("modeTeamBtn").className="modebtn"+(state.mode==="team"?" active":"");
  $("modeSharedBtn").className="modebtn"+(state.mode==="shared"?" active":"");
- renderScorePanel();
- if(state.mode==="shared") renderSharedBoard(); else renderTeamBoard();
- highlightFocus();
+ $("modeMultiplayerBtn").className="modebtn"+(state.mode==="multiplayer"?" active":"");
+ if(state.mode==="multiplayer"){
+  $("scorePanel").style.display="none";
+  $("board").style.display="none";
+  $("multiplayerPanel").style.display="";
+  renderMultiplayerPanel();
+ } else {
+  $("multiplayerPanel").style.display="none";
+  $("scorePanel").style.display="";
+  $("board").style.display="";
+  renderScorePanel();
+  if(state.mode==="shared") renderSharedBoard(); else renderTeamBoard();
+ }
 }
 
 function renderScorePanel(){
+ const p=state.players;
  const field=state.mode==="shared"?"sharedScore":"teamScore";
  const label=state.mode==="shared"?"Shared Board Game — Score":"Team Mode Game — Score";
- const quickAdds=state.quickAdds||[10,5,1];
- const quickBoxes=quickAdds.map((v,i)=>`<input id="quickadd-${i}" value="${esc(v)}" style="width:60px">`).join(" ");
- const cards=state.players.map((p,pi)=>{
-  const quickBtns=quickAdds.map(v=>`<button class="tiny green" onclick="quickAdd(${pi},${v})">+${esc(v)}</button>`).join("");
-  return `<div class="scoreCard">
-   <div><b>${esc(p.name)}</b> — Total: <b>${p.total}</b>
-    <button class="tiny ${p.showPlayer?'hidebtn':'showbtn'}" onclick="togglePlayerShow(${pi})">${p.showPlayer?'Hide Player':'Show Player'}</button>
-   </div>
-   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${quickBtns}
-    <label style="margin:0 0 0 10px">Correct to:</label><input id="bonus-p${pi}" value="${esc(p[field])}" style="width:90px"><button class="tiny primary" onclick="saveBonus(${pi})">Save</button>
-   </div>
-  </div>`;
- }).join("");
  $("scorePanel").innerHTML=`<h2>Scoreboard — ${label}</h2>
- <p style="font-size:12px;color:#475569;margin-top:0">Team Mode and the Shared Board are two separate games — their scores never mix. A player stays off the public screen until you click "Show Player" for them.</p>
- <div class="controls" style="margin-bottom:4px"><b style="align-self:center">Quick-add amounts:</b>${quickBoxes}<button class="tiny primary" onclick="saveQuickAdds()">Save</button></div>
- ${cards}`;
+ <p style="font-size:12px;color:#475569;margin-top:0">Team Mode and the Shared Board are two separate games — their scores never mix. Use the "+" buttons on each answer to award points; the number below can also be corrected by hand.</p>
+ <div class="scoreCard"><div><b>${esc(p[0].name)}</b> — Total: <b>${p[0].total}</b></div>
+  <div class="bonusBox"><label style="margin:0">Correct to:</label><input id="bonus-p0" value="${esc(p[0][field])}"><button class="tiny primary" onclick="saveBonus(0)">Save</button></div></div>
+ <div class="scoreCard"><div><b>${esc(p[1].name)}</b> — Total: <b>${p[1].total}</b></div>
+  <div class="bonusBox"><label style="margin:0">Correct to:</label><input id="bonus-p1" value="${esc(p[1][field])}"><button class="tiny primary" onclick="saveBonus(1)">Save</button></div></div>`;
 }
 function saveBonus(pi){
  const field=state.mode==="shared"?"sharedScore":"teamScore";
  state.players[pi][field]=$("bonus-p"+pi).value;
- send();
-}
-function quickAdd(pi,amount){
- const field=state.mode==="shared"?"sharedScore":"teamScore";
- state.players[pi][field]=(Number(state.players[pi][field])||0)+Number(amount);
- send();
-}
-function saveQuickAdds(){
- state.quickAdds=[0,1,2].map(i=>Number($("quickadd-"+i).value)||0);
- send();
-}
-function togglePlayerShow(pi){
- state.players[pi].showPlayer=!state.players[pi].showPlayer;
  send();
 }
 function awardScore(scope,qi,ai,playerIndex){
@@ -258,6 +201,35 @@ function awardScore(scope,qi,ai,playerIndex){
  state.players[playerIndex][field]=(Number(state.players[playerIndex][field])||0)+(Number.isFinite(n)?n:0);
  send();
 }
+
+/* ---------- Multiplayer: 4 players, hidden until shown, quick-add scoring ---------- */
+function renderMultiplayerPanel(){
+ const mp=state.multiplayer;
+ const quickBoxes=mp.quickAdds.map((v,i)=>`<input id="mp-quickadd-${i}" value="${esc(v)}" style="width:60px">`).join(" ");
+ const cards=mp.players.map((p,pi)=>{
+  const quickBtns=mp.quickAdds.map(v=>`<button class="tiny green" onclick="mpQuickAdd(${pi},${v})">+${esc(v)}</button>`).join("");
+  return `<div class="scoreCard">
+   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="mp-name-${pi}" value="${esc(p.name)}" style="width:140px;font-weight:bold">
+    <button class="tiny primary" onclick="mpSaveName(${pi})">Save Name</button>
+    <b style="margin-left:6px">Total: ${p.score}</b>
+    <button class="tiny ${p.showPlayer?'hidebtn':'showbtn'}" onclick="mpTogglePlayerShow(${pi})">${p.showPlayer?'Hide Player':'Show Player'}</button>
+   </div>
+   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${quickBtns}
+    <label style="margin:0 0 0 10px">Correct to:</label><input id="mp-score-${pi}" value="${esc(p.score)}" style="width:90px"><button class="tiny primary" onclick="mpSaveScore(${pi})">Save</button>
+   </div>
+  </div>`;
+ }).join("");
+ $("multiplayerPanel").innerHTML=`<h2>Multiplayer Scoreboard</h2>
+ <p style="font-size:12px;color:#475569;margin-top:0">A separate game from Team Mode and the Shared Board — its score never mixes with theirs. A player stays completely off the public screen until you click "Show Player" for them.</p>
+ <div class="controls" style="margin-bottom:4px"><b style="align-self:center">Quick-add amounts:</b>${quickBoxes}<button class="tiny primary" onclick="mpSaveQuickAdds()">Save</button></div>
+ ${cards}`;
+}
+function mpSaveName(pi){state.multiplayer.players[pi].name=$("mp-name-"+pi).value||("PLAYER "+(pi+1));send();}
+function mpSaveScore(pi){state.multiplayer.players[pi].score=Number($("mp-score-"+pi).value)||0;send();}
+function mpQuickAdd(pi,amount){state.multiplayer.players[pi].score=(Number(state.multiplayer.players[pi].score)||0)+Number(amount);send();}
+function mpSaveQuickAdds(){state.multiplayer.quickAdds=[0,1,2].map(i=>Number($("mp-quickadd-"+i).value)||0);send();}
+function mpTogglePlayerShow(pi){state.multiplayer.players[pi].showPlayer=!state.multiplayer.players[pi].showPlayer;send();}
 
 function questionCardHTML(scope,qi,q){
  const rows=q.answers.map((a,ai)=>{
@@ -270,7 +242,7 @@ function questionCardHTML(scope,qi,q){
    <button class="tiny primary" onclick="saveAnswerRow('${scope}',${qi},${ai})">Save</button>
    ${award}</div>`;
  }).join("");
- return `<div class="section" data-focus-scope="${scope}" data-focus-qi="${qi}">
+ return `<div class="section">
   <div class="section-title"><h3>Question ${qi+1}</h3>
    <button class="tiny ${q.showQuestion?'hidebtn':'showbtn'}" onclick="toggleField('${scope}',${qi},undefined,'showQuestion')">${q.showQuestion?'Hide':'Show'}</button></div>
   <textarea id="${idBase(scope,qi)}-q" placeholder="Type the question...">${esc(q.question)}</textarea>
@@ -319,7 +291,7 @@ function isHeaderLine(line){
  return {index:parseInt(m[1],10),rest:m[2]};
 }
 function parseBulkText(text){
- const lines=text.replace(/ /g," ").split(/\r?\n/);
+ const lines=text.replace(/ /g," ").split(/\r?\n/);
  const questions=[];
  let current=null;
  lines.forEach(line=>{
@@ -380,11 +352,20 @@ function save(){
  state.players.forEach((p,pi)=>{const el=$("p"+(pi+1));if(el)p.name=el.value||("PLAYER "+(pi+1));});
  send();
 }
-function send(){if(window.ANDROID_OFFLINE_MODE)saveDraft();socket.emit("updateState",state)}
+function send(){
+ if(window.ANDROID_OFFLINE_MODE){
+  saveDraft();
+  if(!socket.connected) render(); // no live echo will arrive until connected, so refresh locally
+ }
+ socket.emit("updateState",state);
+}
 function gameOver(){
  state.gameOver=true;
- const best=Math.max(...state.players.map(p=>p.total));
- const winners=state.players.filter(p=>p.total===best).map(p=>p.name);
+ const list=state.mode==="multiplayer"
+  ?state.multiplayer.players.map(p=>({name:p.name,score:p.score}))
+  :state.players.map(p=>({name:p.name,score:p.total}));
+ const best=Math.max(...list.map(p=>p.score));
+ const winners=list.filter(p=>p.score===best).map(p=>p.name);
  state.winner=winners.length>1?"DRAW — "+winners.join(" & "):winners[0];
  send();
 }
@@ -423,7 +404,7 @@ async function loadConnectionInfo(){
   renderConnectionInfo(info);
  }catch(e){
   $("connectionInfo").textContent=window.ANDROID_OFFLINE_MODE
-   ?"Not connected to the game computer yet — this will fill in once you Sync."
+   ?"Not connected to the game computer yet — this will fill in once you connect."
    :"Could not load connection info.";
  }
 }
@@ -441,21 +422,22 @@ function renderConnectionInfo(info){
 function copyText(t){if(navigator.clipboard)navigator.clipboard.writeText(t)}
 if(!window.ANDROID_OFFLINE_MODE)loadConnectionInfo();
 
-/* ---------- Android app: offline drafting + LAN auto-find + manual sync ---------- */
+/* ---------- Android app: offline drafting + LAN auto-find + persistent live connection ---------- */
 function defaultState(){
  const mkAnswer=()=>({text:"",mark:"",showAnswer:false,showMark:false});
  const mkQuestion=()=>({question:"",showQuestion:false,answers:Array.from({length:5},mkAnswer)});
- const mkPlayer=name=>({name,questions:Array.from({length:5},mkQuestion),teamScore:0,sharedScore:0,total:0,showPlayer:false});
+ const mkPlayer=name=>({name,questions:Array.from({length:5},mkQuestion),teamScore:0,sharedScore:0,total:0});
+ const mkMpPlayer=name=>({name,score:0,showPlayer:false});
  return {title:"WORD ARENA TV",subtitle:"OFFLINE WORD GAME",mode:"team",
   timer:{running:false,remaining:30,lastStarted:null},gameOver:false,winner:"",image:{data:"",name:""},
-  quickAdds:[10,5,1],
-  players:[mkPlayer("PLAYER 1"),mkPlayer("PLAYER 2"),mkPlayer("PLAYER 3"),mkPlayer("PLAYER 4")],shared:{questions:Array.from({length:5},mkQuestion)}};
+  players:[mkPlayer("PLAYER 1"),mkPlayer("PLAYER 2")],shared:{questions:Array.from({length:5},mkQuestion)},
+  multiplayer:{quickAdds:[10,5,1],players:[mkMpPlayer("PLAYER 1"),mkMpPlayer("PLAYER 2"),mkMpPlayer("PLAYER 3"),mkMpPlayer("PLAYER 4")]}};
 }
 function saveDraft(){try{localStorage.setItem('waTvDraft',JSON.stringify(state))}catch(e){}}
 function updateSyncStatus(s){
  const map={offline:"📴 Not connected — editing offline",searching:"🔍 Searching your WiFi for the game computer…",
   notfound:"⚠️ Could not find it. Make sure you're on the same WiFi as the game computer, then try again.",
-  connecting:"🔄 Sending your questions…",synced:"✅ Sent! Check the game computer's screen.",
+  connecting:"🔄 Connecting…",connected:"✅ Connected — this phone is now a live remote control",
   failed:"⚠️ Found it earlier, but could not reach it just now. Try again."};
  const el=$("syncStatus");if(el)el.textContent=map[s]||s;
 }
@@ -466,15 +448,15 @@ if(window.ANDROID_OFFLINE_MODE){
  try{draft=JSON.parse(localStorage.getItem('waTvDraft')||"null")}catch(e){}
  state=draft||defaultState();
  window.SERVER_BASE=localStorage.getItem('waTvServerBase')||"";
- setTimeout(render,0); // deferred: render() touches the voice-control "focus" var declared later in this script
+ render();
  updateSyncStatus("offline");
  if(window.SERVER_BASE){$("syncNowBtn").disabled=false;loadConnectionInfo();}
- else{$("connectionInfo").textContent="Not connected to the game computer yet — this will fill in once you Sync.";}
+ else{$("connectionInfo").textContent="Not connected to the game computer yet — this will fill in once you connect.";}
 
  window.onServerFound=function(ip,port){
   window.SERVER_BASE=`http://${ip}:${port||3000}`;
   try{localStorage.setItem('waTvServerBase',window.SERVER_BASE)}catch(e){}
-  $("foundServerLabel").textContent=`Found the game computer at ${ip}. Tap "Sync Now" to send your questions.`;
+  $("foundServerLabel").textContent=`Found the game computer at ${ip}. Tap "Connect & Sync".`;
   $("syncNowBtn").disabled=false;
   updateSyncStatus("offline");
  };
@@ -486,110 +468,28 @@ if(window.ANDROID_OFFLINE_MODE){
   if(window.AndroidBridge&&window.AndroidBridge.discover){window.AndroidBridge.discover()}
   else{$("foundServerLabel").textContent="Auto-search only works in the installed phone app, not in a regular browser."}
  };
+ // Connects once, sends the current draft, then STAYS connected: from then on this
+ // phone behaves exactly like the normal Admin screen (every button acts live).
  window.syncNow=function(){
   if(!window.SERVER_BASE){alert('No game computer found yet. Tap "Find Game Computer" first while on its WiFi.');return}
+  if(socket&&socket.connected){socket.emit("updateState",state);updateSyncStatus("connected");return}
   updateSyncStatus("connecting");
-  const liveSocket=io(window.SERVER_BASE,{reconnection:false,timeout:5000});
+  const liveSocket=io(window.SERVER_BASE,{timeout:5000});
+  let promoted=false;
   liveSocket.on("connect",()=>{
    liveSocket.emit("updateState",state);
-   updateSyncStatus("synced");
+   if(!promoted){
+    promoted=true;
+    socket=liveSocket;
+    socket.on("state",s=>{state=s;render();});
+    socket.on("disconnect",()=>{updateSyncStatus("offline");$("conn").textContent="📴 Disconnected — will reconnect automatically";});
+   }
+   updateSyncStatus("connected");
+   $("conn").textContent="Connected to the game computer — live remote control";
    loadConnectionInfo();
-   setTimeout(()=>liveSocket.close(),500);
   });
   liveSocket.on("connect_error",()=>updateSyncStatus("failed"));
  };
-}
-
-/* ---------- Voice control ---------- */
-let focus={scope:'p0',qi:0};
-function setFocus(scope,qi){focus.scope=scope;focus.qi=qi;highlightFocus()}
-function highlightFocus(){
- if(!state)return;
- document.querySelectorAll('[data-focus-scope]').forEach(el=>{
-  const match=el.dataset.focusScope===focus.scope&&Number(el.dataset.focusQi)===focus.qi;
-  el.style.outline=match?"3px solid #f59e0b":"";
- });
- $("focusLabel").textContent=labelForScope(focus.scope)+" — Question "+(focus.qi+1);
-}
-function logVoice(text){
- const el=$("voiceLog");
- const line=document.createElement("div");line.textContent="> "+text;
- el.appendChild(line);
- while(el.children.length>8)el.removeChild(el.firstChild);
- el.scrollTop=el.scrollHeight;
-}
-const WORD_NUM={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10};
-function parseNumber(str){
- if(!str)return null;
- str=str.trim().toLowerCase();
- if(/^\d+$/.test(str))return parseInt(str,10);
- return WORD_NUM[str]||null;
-}
-function setShow(scope,qi,ai,field,value){
- const arr=getQArr(scope);
- if(ai===undefined)arr[qi][field]=value; else arr[qi].answers[ai][field]=value;
-}
-
-let recognition=null,listening=false;
-function initRecognition(){
- const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SR){$("voiceStatus").textContent="Voice control isn't supported in this browser. Please use Chrome.";return null}
- const r=new SR();
- r.continuous=true;r.interimResults=false;r.lang="en-US";
- r.onresult=e=>{
-  const text=e.results[e.results.length-1][0].transcript.trim().toLowerCase();
-  logVoice(text);
-  handleVoiceCommand(text);
- };
- r.onerror=e=>logVoice("(mic error: "+e.error+")");
- r.onend=()=>{if(listening)try{r.start()}catch(e){}};
- return r;
-}
-function toggleListening(){
- if(!recognition)recognition=initRecognition();
- if(!recognition)return;
- listening=!listening;
- if(listening){recognition.start();$("voiceBtn").textContent="Stop Listening";$("voiceStatus").textContent="Listening…"}
- else{recognition.stop();$("voiceBtn").textContent="Start Listening";$("voiceStatus").textContent="Stopped"}
-}
-function handleVoiceCommand(text){
- let m;
- if(m=text.match(/^(?:team|player)\s+(\w+)$/)){const n=parseNumber(m[1]);if(n>=1&&n<=state.players.length){setFocus('p'+(n-1),focus.qi);return}}
- if(/^shared(\s+board)?$/.test(text)){setFocus('shared',focus.qi);return}
- if(m=text.match(/^(?:go to |focus )?question\s+(\w+)$/)){const n=parseNumber(m[1]);if(n>=1&&n<=5){setFocus(focus.scope,n-1)}return}
- if(/^next question$/.test(text)){setFocus(focus.scope,Math.min(4,focus.qi+1));return}
- if(/^(?:previous|prev) question$/.test(text)){setFocus(focus.scope,Math.max(0,focus.qi-1));return}
- if(m=text.match(/^show question(?:\s+(\w+))?$/)){
-  const qi=m[1]?parseNumber(m[1])-1:focus.qi;
-  setFocus(focus.scope,qi);
-  setShow(focus.scope,qi,undefined,'showQuestion',true);
-  for(let ai=0;ai<5;ai++){setShow(focus.scope,qi,ai,'showAnswer',true);setShow(focus.scope,qi,ai,'showMark',true)}
-  send();render();return;
- }
- if(m=text.match(/^hide question(?:\s+(\w+))?$/)){
-  const qi=m[1]?parseNumber(m[1])-1:focus.qi;
-  setShow(focus.scope,qi,undefined,'showQuestion',false);
-  for(let ai=0;ai<5;ai++){setShow(focus.scope,qi,ai,'showAnswer',false);setShow(focus.scope,qi,ai,'showMark',false)}
-  send();render();return;
- }
- if(m=text.match(/^show answer\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showAnswer',true);send();render()}return}
- if(m=text.match(/^hide answer\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showAnswer',false);send();render()}return}
- if(m=text.match(/^show (?:mark|score)\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showMark',true);send();render()}return}
- if(m=text.match(/^hide (?:mark|score)\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showMark',false);send();render()}return}
- if(/^show all$/.test(text)){
-  setShow(focus.scope,focus.qi,undefined,'showQuestion',true);
-  for(let ai=0;ai<5;ai++){setShow(focus.scope,focus.qi,ai,'showAnswer',true);setShow(focus.scope,focus.qi,ai,'showMark',true)}
-  send();render();return;
- }
- if(/^hide all$/.test(text)){
-  setShow(focus.scope,focus.qi,undefined,'showQuestion',false);
-  for(let ai=0;ai<5;ai++){setShow(focus.scope,focus.qi,ai,'showAnswer',false);setShow(focus.scope,focus.qi,ai,'showMark',false)}
-  send();render();return;
- }
- if(/^start timer$/.test(text)){socket.emit('timerStart');return}
- if(/^pause timer$/.test(text)){socket.emit('timerPause');return}
- if(/^reset timer$/.test(text)){socket.emit('timerReset',30);return}
- logVoice('(not recognized: "'+text+'")');
 }
 </script>
 </body>

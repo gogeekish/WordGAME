@@ -56,10 +56,8 @@ function renderTeam(){
  const root=document.getElementById("board");
  root.className="board team";
  document.getElementById("scorebar").style.display="none";
- const shown=state.players.filter(p=>p.showPlayer);
- if(!shown.length){root.innerHTML=`<div class="waiting">Waiting for players…</div>`;return}
  root.innerHTML="";
- shown.forEach(p=>{
+ state.players.forEach(p=>{
   const el=document.createElement("div");el.className="player";
   el.innerHTML=`<h2>${esc(p.name)}</h2><div class="total">TOTAL SCORE: ${esc(p.total)}</div>`+
    p.questions.map((q,qi)=>questionBlockHTML(q,qi)).join("");
@@ -72,10 +70,19 @@ function renderShared(){
  root.className="board shared";
  root.innerHTML=`<div class="shared-grid">${state.shared.questions.map((q,qi)=>questionBlockHTML(q,qi)).join("")}</div>`;
  const bar=document.getElementById("scorebar");
- const shown=state.players.filter(p=>p.showPlayer);
- if(!shown.length){bar.style.display="none";return}
  bar.style.display="flex";
- bar.innerHTML=shown.map(p=>`${esc(p.name)}<span>${p.total}</span>`).join(" &nbsp;—&nbsp; ");
+ bar.innerHTML=state.players.map(p=>`${esc(p.name)}<span>${p.total}</span>`).join(" &nbsp;—&nbsp; ");
+}
+
+function renderMultiplayer(){
+ const root=document.getElementById("board");
+ root.className="board shared";
+ document.getElementById("scorebar").style.display="none";
+ const shown=state.multiplayer.players.filter(p=>p.showPlayer);
+ if(!shown.length){root.innerHTML=`<div class="waiting">Waiting for players…</div>`;return}
+ root.innerHTML=`<div class="shared-grid">${shown.map(p=>
+  `<div class="player"><h2>${esc(p.name)}</h2><div class="total">TOTAL SCORE: ${esc(p.score)}</div></div>`
+ ).join("")}</div>`;
 }
 
 function render(){
@@ -85,7 +92,7 @@ function render(){
  document.getElementById("subtitle").textContent=state.subtitle||"";
  document.getElementById("timer").textContent=formatTime(state.timer.remaining);
  const c=document.getElementById("corner");c.innerHTML=state.image.data?`<img src="${state.image.data}"><div>${esc(state.image.name)}</div>`:"";
- if(state.mode==="shared")renderShared();else renderTeam();
+ if(state.mode==="shared")renderShared();else if(state.mode==="multiplayer")renderMultiplayer();else renderTeam();
  const over=document.getElementById("over");over.classList.toggle("show",!!state.gameOver);document.getElementById("winner").textContent=state.winner||"";
 }
 function formatTime(sec){sec=Math.max(0,Number(sec)||0);const m=Math.floor(sec/60),s=sec%60;return m?`${m}:${String(s).padStart(2,"0")}`:String(s)}

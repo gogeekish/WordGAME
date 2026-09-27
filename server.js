@@ -65,22 +65,27 @@ function makePlayer(name) {
     questions: Array.from({ length: QUESTIONS_PER_PLAYER }, makeQuestion),
     teamScore: 0,
     sharedScore: 0,
-    total: 0,
-    showPlayer: false // hidden on the public screen until the host clicks Show
+    total: 0
   };
+}
+function makeMultiplayerPlayer(name) {
+  return { name, score: 0, showPlayer: false }; // hidden on the public screen until the host clicks Show
 }
 
 let state = {
   title: "WORD ARENA TV",
   subtitle: "OFFLINE WORD GAME",
-  mode: "team", // "team" = each player has their own 5 questions, "shared" = one shared board of 5 questions
+  mode: "team", // "team" = each player has their own 5 questions, "shared" = one shared board, "multiplayer" = the 4-player scoreboard
   timer: { running: false, remaining: 30, lastStarted: null },
   gameOver: false,
   winner: "",
   image: { data: "", name: "" },
-  quickAdds: [10, 5, 1], // the 3 quick-add score amounts, editable per game
-  players: [makePlayer("PLAYER 1"), makePlayer("PLAYER 2"), makePlayer("PLAYER 3"), makePlayer("PLAYER 4")],
-  shared: { questions: Array.from({ length: QUESTIONS_PER_PLAYER }, makeQuestion) }
+  players: [makePlayer("PLAYER 1"), makePlayer("PLAYER 2")],
+  shared: { questions: Array.from({ length: QUESTIONS_PER_PLAYER }, makeQuestion) },
+  multiplayer: {
+    quickAdds: [10, 5, 1], // the 3 quick-add score amounts, editable per game
+    players: [makeMultiplayerPlayer("PLAYER 1"), makeMultiplayerPlayer("PLAYER 2"), makeMultiplayerPlayer("PLAYER 3"), makeMultiplayerPlayer("PLAYER 4")]
+  }
 };
 
 function toNumber(v) {
@@ -91,9 +96,13 @@ function toNumber(v) {
 // Team Mode and Shared Mode are two separate games with their own scores —
 // switching modes never mixes them. Points only move when the host clicks
 // a "+ Player" award button; showing/hiding an answer is purely visual.
+// Multiplayer is a third, completely separate scoreboard/game.
 function normalize() {
   state.players.forEach(p => {
     p.total = state.mode === "shared" ? toNumber(p.sharedScore) : toNumber(p.teamScore);
+  });
+  state.multiplayer.players.forEach(p => {
+    p.score = toNumber(p.score);
   });
 }
 
@@ -120,7 +129,8 @@ io.on("connection", socket => {
       timer: { ...state.timer, ...(incoming.timer || {}) },
       image: { ...state.image, ...(incoming.image || {}) },
       players: incoming.players || state.players,
-      shared: incoming.shared || state.shared
+      shared: incoming.shared || state.shared,
+      multiplayer: incoming.multiplayer || state.multiplayer
     };
     normalize();
     io.emit("state", publicState());
