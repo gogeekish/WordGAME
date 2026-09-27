@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NextGen Login Code</title>
+<style>
+  :root{ --bg:#0f172a; --card:#1e293b; --ink:#f1f5f9; --sub:#94a3b8; --accent:#22c55e; --line:#334155; }
+  *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:36px 40px;max-width:380px;width:100%;text-align:center}
+  h1{font-size:18px;margin:0 0 4px;color:var(--sub);font-weight:normal}
+  .code{font-size:64px;font-weight:900;letter-spacing:10px;color:var(--accent);margin:18px 0;font-family:Consolas,monospace}
+  .ring{width:60px;height:60px;margin:0 auto 10px;position:relative}
+  .ring svg{transform:rotate(-90deg)}
+  .ring circle{fill:none;stroke-width:6}
+  .ring .bg{stroke:var(--line)}
+  .ring .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+  .ring .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold}
+  .hint{color:var(--sub);font-size:13px;margin-top:14px;line-height:1.5}
+  .copybtn{margin-top:16px;background:none;border:1px solid var(--line);color:var(--ink);padding:8px 18px;border-radius:10px;cursor:pointer;font-size:13px}
+  .copybtn.copied{border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔑 NextGen Login Code</h1>
+  <div class="ring">
+    <svg width="60" height="60">
+      <circle class="bg" cx="30" cy="30" r="26"></circle>
+      <circle class="fg" id="ringFg" cx="30" cy="30" r="26"></circle>
+    </svg>
+    <div class="num" id="ringNum">60</div>
+  </div>
+  <div class="code" id="codeDisplay">------</div>
+  <button class="copybtn" id="copyBtn">Copy Code</button>
+  <div class="hint">Type this code into the NextGen Enrollment Count app's login screen. A new code appears automatically — no internet needed.</div>
+</div>
+
+<script src="vendor/totp-shared.js"></script>
+<script>
+const SHARED_SECRET = "Ir92ROOE2DLyfXTx0gCtisYWpnIlOu5h";
+const TIME_STEP = 60;
+const DIGITS = 4;
+
+const codeDisplay = document.getElementById('codeDisplay');
+const ringFg = document.getElementById('ringFg');
+const ringNum = document.getElementById('ringNum');
+const copyBtn = document.getElementById('copyBtn');
+
+const RADIUS = 26;
+const CIRC = 2 * Math.PI * RADIUS;
+ringFg.style.strokeDasharray = CIRC;
+
+let lastCode = null;
+
+function tick(){
+  const now = Math.floor(Date.now() / 1000);
+  const code = NextGenTOTP.totp(SHARED_SECRET, TIME_STEP, DIGITS, now);
+  const secondsIntoWindow = now % TIME_STEP;
+  const secondsLeft = TIME_STEP - secondsIntoWindow;
+
+  if (code !== lastCode){
+    codeDisplay.textContent = code;
+    lastCode = code;
+  }
+  ringNum.textContent = secondsLeft;
+  const fraction = secondsLeft / TIME_STEP;
+  ringFg.style.strokeDashoffset = CIRC * (1 - fraction);
+}
+
+tick();
+setInterval(tick, 1000);
+
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(lastCode || '');
+    copyBtn.textContent = 'Copied!';
+    copyBtn.classList.add('copied');
+    setTimeout(() => { copyBtn.textContent = 'Copy Code'; copyBtn.classList.remove('copied'); }, 1500);
+  } catch(e){
+    copyBtn.textContent = 'Could not copy';
+  }
+});
+</script>
+</body>
+</html>
