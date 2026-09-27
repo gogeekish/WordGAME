@@ -50,7 +50,7 @@ def compute_signals(
     strategy_choice: str,
     candles_s1: list,
     candles_s2: list,
-    stop_distance: float,
+    stop_distance: float,  # a raw PRICE distance (e.g. 5.0 = $5 on XAUUSD), not MQL5-style "points"
     reward_multiple: float,
     lookback: int = 20,
     tolerance_ratio: float = 0.15,

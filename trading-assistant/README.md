@@ -41,6 +41,12 @@ trading-assistant/
     Strategy3_WickSweepAfter_AutoTrade.mq5 Strategy 3 - Auto Trade EA
     Combined_AutoTrade.mq5                 All 3 strategies - Auto Trade EA
     RiskGate.mqh                           Shared reboot rules, used by the 4 Auto Trade EAs above
+  app/
+    gui_app.py         The desktop app window - pick a strategy, pick Assistant/Auto, Start/Stop
+    app_core.py         The app's logic (no GUI, no MT5 import) - fully tested on its own
+    live_data.py         The only file that talks to MetaTrader 5
+    requirements.txt     What build_exe.bat installs (MetaTrader5, PyInstaller)
+    build_exe.bat        Run this ON WINDOWS to build TradingAssistant.exe
 ```
 
 **Trade Assistant** = watches the chart, marks the setup, sends an
@@ -145,6 +151,47 @@ prints OK/FAIL for each one.
 Every input has a short comment next to it in MetaEditor explaining
 what it does.
 
+## Part 3 - The desktop app (one app, all 4 strategy choices)
+
+`trading-assistant/app/` is a single Windows program - pick a
+strategy (1, 2, 3, or Combined), pick Trade Assistant or Auto Trade,
+set your symbol/volume/risk settings, and press Start. It connects to
+your already-running MetaTrader 5 terminal exactly the way `Mt5Broker`
+in `broker.py` does, and reuses the same strategy/risk-gate code as
+everything else in this project - it's a window on top of the same
+logic, not a separate implementation.
+
+**Why it can't just be a ready-made .exe:** the `MetaTrader5` Python
+package only works on Windows, and only once MT5 is already installed
+and logged into your broker (Exness or any other MT5 broker) on that
+same machine. This project was written in a Linux environment with no
+Windows and no MT5 terminal, so the .exe has to be built on your own
+Windows PC - which is also exactly where MT5 already lives.
+
+**To build it:**
+
+1. Make sure [Python](https://www.python.org/downloads/) is installed
+   on your Windows PC (get it from python.org if not - tick "Add
+   python.exe to PATH" during install).
+2. Open the `trading-assistant/app/` folder.
+3. Double-click `build_exe.bat`.
+4. Wait for it to finish - it prints `Done!` and where to find the
+   file: `dist\TradingAssistant.exe`.
+
+**To use it:** open MetaTrader 5, log into your account, then run
+`TradingAssistant.exe`. Click **Connect to MT5**, check your settings,
+then **Start**. The log panel shows every alert (and, in Auto Trade
+mode, every order placed or skipped - including exactly why the risk
+gate blocked one, if it did).
+
+This has been tested as thoroughly as this environment allows: the
+window opens and every button/field works correctly, and the full
+alert/trade pipeline (background thread -> risk gate -> broker -> log)
+was verified with fake data standing in for MetaTrader 5. **The actual
+MetaTrader 5 connection itself has never been tested** - there is no
+MT5 terminal here to connect to. Test the real connection on a demo
+account before trusting it.
+
 ## Which strategy is which
 
 - **Strategy 1 - Sweep + Equal-Wick:** waits for price to sweep a
@@ -186,7 +233,9 @@ easily.
 - **Nothing has been tested on a live or demo MetaTrader account.**
   Every "Auto Trade" file is implemented and logically tested (in
   Python) or carefully re-read by hand (in MQL5), but never run
-  against a real order book.
+  against a real order book. The desktop app's window and its full
+  alert/trade pipeline were tested with fake data; its actual MT5
+  connection has never been tested either, for the same reason.
 - **Backtests use a small amount of data** (days to weeks). That is
   enough to sanity-check an idea, nowhere near enough to prove a
   strategy has a real edge.
