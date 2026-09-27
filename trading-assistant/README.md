@@ -42,10 +42,11 @@ trading-assistant/
     Combined_AutoTrade.mq5                 All 3 strategies - Auto Trade EA
     RiskGate.mqh                           Shared reboot rules, used by the 4 Auto Trade EAs above
   app/
-    gui_app.py         The desktop app window - pick a strategy, pick Assistant/Auto, Start/Stop
-    app_core.py         The app's logic (no GUI, no MT5 import) - fully tested on its own
+    gui_app.py           The desktop app window - Trading tab + AI Chart Analysis tab
+    app_core.py          The Trading tab's logic (no GUI, no MT5 import) - fully tested on its own
     live_data.py         The only file that talks to MetaTrader 5
-    requirements.txt     What build_exe.bat installs (MetaTrader5, PyInstaller)
+    ai_analysis.py        The only file that talks to the Anthropic API (chart analysis)
+    requirements.txt     What build_exe.bat installs (MetaTrader5, PyInstaller, anthropic, Pillow)
     build_exe.bat        Run this ON WINDOWS to build TradingAssistant.exe
 ```
 
@@ -191,6 +192,34 @@ was verified with fake data standing in for MetaTrader 5. **The actual
 MetaTrader 5 connection itself has never been tested** - there is no
 MT5 terminal here to connect to. Test the real connection on a demo
 account before trusting it.
+
+### The "AI Chart Analysis" tab
+
+A second tab in the same app: load or paste a chart screenshot and
+Claude will describe what it sees and say whether Strategy 1, 2, or
+3's specific rules appear to be present - and where - or plainly admit
+when the image is too blurry/small to be sure, instead of guessing.
+
+This needs your own **Anthropic API key** from
+[console.anthropic.com](https://console.anthropic.com) - that's a
+separate thing from a claude.ai subscription, is billed per use to
+your own account, and is not included with this app. Paste it into the
+"API key" field; check "Remember this key" to save it (as **plain
+text**, in a file in your home folder) so you don't have to retype it
+every time - only do this on a computer you trust.
+
+- **Load Image...** opens a file picker (PNG/JPEG/GIF/WEBP).
+- **Paste from Clipboard** uses whatever image you last copied (works
+  on Windows/macOS; not supported on Linux).
+- This tab needs the internet, not MT5 - you can use it without ever
+  clicking Connect.
+
+Tested as thoroughly as this environment allows, including real calls
+to the actual Anthropic API (with a deliberately invalid key, to
+confirm the request is built correctly and fails cleanly rather than
+crashing) and the full background-thread -> API -> result-box
+pipeline under a real Tk main loop. **A real chart analysis, with a
+real key, has not been run** - that part is on you to try.
 
 ## Which strategy is which
 

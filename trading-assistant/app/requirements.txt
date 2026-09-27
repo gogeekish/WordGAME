@@ -1,2 +1,4 @@
 MetaTrader5
 pyinstaller
+anthropic
+Pillow

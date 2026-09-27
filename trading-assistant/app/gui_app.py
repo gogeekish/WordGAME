@@ -2,54 +2,80 @@
 
 Wraps app_core.AppController in a Tkinter window: pick a strategy, pick
 Trade Assistant or Auto Trade, connect to your MetaTrader 5 terminal,
-and press Start. See ../README.md for the full manual, and
+and press Start. A second tab lets you paste or load a chart
+screenshot and have Claude analyze it against this project's own
+strategy rules. See ../README.md for the full manual, and
 build_exe.bat for turning this into a standalone TradingAssistant.exe.
 
 IMPORTANT: the MetaTrader5 Python package (used by live_data.py) only
 works on Windows, and only once you already have the MT5 terminal
 installed and logged into your broker account (Exness or any other
 MT5 broker) on the same machine. This app talks to that local
-terminal - it does not connect to a broker directly.
+terminal - it does not connect to a broker directly. The AI Chart
+Analysis tab needs your own Anthropic API key from console.anthropic.com
+(separate from a claude.ai subscription) and needs the internet, not MT5.
 """
 
+import json
 import queue
+import threading
 import tkinter as tk
-from tkinter import messagebox, scrolledtext, ttk
+from pathlib import Path
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from app_core import MODE_CHOICES, STRATEGY_CHOICES, TIMEFRAME_CHOICES, AppController
 from broker import FakeBroker
 from live_data import Mt5DataSource
+
+CONFIG_PATH = Path.home() / ".trading_assistant_config.json"
+PREVIEW_MAX_SIZE = (420, 300)
 
 
 class TradingAssistantApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Trading Assistant")
-        self.root.geometry("640x640")
-        self.root.minsize(560, 480)
+        self.root.geometry("640x700")
+        self.root.minsize(560, 520)
 
         self._log_queue: "queue.Queue[str]" = queue.Queue()
         self._data_source = None  # created on Connect
         self._broker = None       # created on Connect
         self._controller = AppController(log=self._log_queue.put)
 
+        self._image_path: str = ""
+        self._preview_photo = None  # keep a reference or Tk garbage-collects it
+
         self._build_widgets()
+        self._load_saved_api_key()
         self._poll_log_queue()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     # ------------------------------------------------------------------
     def _build_widgets(self) -> None:
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+
+        trading_tab = ttk.Frame(notebook)
+        ai_tab = ttk.Frame(notebook)
+        notebook.add(trading_tab, text="Trading")
+        notebook.add(ai_tab, text="AI Chart Analysis")
+
+        self._build_trading_tab(trading_tab)
+        self._build_ai_tab(ai_tab)
+
+    def _build_trading_tab(self, parent: ttk.Frame) -> None:
         pad = dict(padx=8, pady=4)
 
-        conn = ttk.LabelFrame(self.root, text="Connection")
-        conn.pack(fill="x", padx=10, pady=(10, 4))
+        conn = ttk.LabelFrame(parent, text="Connection")
+        conn.pack(fill="x", pady=(0, 4))
         self.connect_btn = ttk.Button(conn, text="Connect to MT5", command=self._on_connect_clicked)
         self.connect_btn.grid(row=0, column=0, **pad)
         self.connection_status = tk.StringVar(value="Not connected")
         ttk.Label(conn, textvariable=self.connection_status).grid(row=0, column=1, sticky="w", **pad)
 
-        settings = ttk.LabelFrame(self.root, text="Settings")
-        settings.pack(fill="x", padx=10, pady=4)
+        settings = ttk.LabelFrame(parent, text="Settings")
+        settings.pack(fill="x", pady=4)
 
         self.symbol_var = tk.StringVar(value="XAUUSD")
         self.timeframe_var = tk.StringVar(value="M15")
@@ -81,8 +107,8 @@ class TradingAssistantApp:
         row("Max losses in a row before halt", ttk.Entry(settings, textvariable=self.max_losses_var), 8)
         row("Check every N seconds", ttk.Entry(settings, textvariable=self.poll_seconds_var), 9)
 
-        controls = ttk.Frame(self.root)
-        controls.pack(fill="x", padx=10, pady=4)
+        controls = ttk.Frame(parent)
+        controls.pack(fill="x", pady=4)
         self.start_btn = ttk.Button(controls, text="Start", command=self._on_start_clicked)
         self.start_btn.pack(side="left", padx=(0, 6))
         self.stop_btn = ttk.Button(controls, text="Stop", command=self._on_stop_clicked, state="disabled")
@@ -92,10 +118,45 @@ class TradingAssistantApp:
         self.running_status = tk.StringVar(value="Stopped")
         ttk.Label(controls, textvariable=self.running_status).pack(side="right")
 
-        log_frame = ttk.LabelFrame(self.root, text="Log")
-        log_frame.pack(fill="both", expand=True, padx=10, pady=(4, 10))
+        log_frame = ttk.LabelFrame(parent, text="Log")
+        log_frame.pack(fill="both", expand=True, pady=(4, 0))
         self.log_widget = scrolledtext.ScrolledText(log_frame, state="disabled", wrap="word")
         self.log_widget.pack(fill="both", expand=True)
+
+    def _build_ai_tab(self, parent: ttk.Frame) -> None:
+        pad = dict(padx=8, pady=4)
+
+        key_frame = ttk.LabelFrame(parent, text="Anthropic API key (from console.anthropic.com)")
+        key_frame.pack(fill="x", pady=(0, 4))
+        key_frame.columnconfigure(1, weight=1)
+        self.api_key_var = tk.StringVar(value="")
+        ttk.Label(key_frame, text="API key").grid(row=0, column=0, sticky="w", **pad)
+        ttk.Entry(key_frame, textvariable=self.api_key_var, show="*").grid(row=0, column=1, sticky="ew", **pad)
+        self.remember_key_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            key_frame, text="Remember this key on this computer (saved as plain text)",
+            variable=self.remember_key_var,
+        ).grid(row=1, column=0, columnspan=2, sticky="w", padx=8)
+
+        image_frame = ttk.LabelFrame(parent, text="Chart screenshot")
+        image_frame.pack(fill="x", pady=4)
+        btn_row = ttk.Frame(image_frame)
+        btn_row.pack(fill="x", padx=8, pady=4)
+        ttk.Button(btn_row, text="Load Image...", command=self._on_load_image_clicked).pack(side="left")
+        ttk.Button(btn_row, text="Paste from Clipboard", command=self._on_paste_image_clicked).pack(side="left", padx=6)
+        self.image_status_var = tk.StringVar(value="No image loaded")
+        ttk.Label(btn_row, textvariable=self.image_status_var).pack(side="left", padx=6)
+
+        self.preview_label = ttk.Label(image_frame, text="(preview appears here)", anchor="center")
+        self.preview_label.pack(fill="x", padx=8, pady=(0, 8))
+
+        self.analyze_btn = ttk.Button(parent, text="Analyze with AI", command=self._on_analyze_clicked)
+        self.analyze_btn.pack(anchor="w", pady=4)
+
+        result_frame = ttk.LabelFrame(parent, text="Analysis")
+        result_frame.pack(fill="both", expand=True, pady=(4, 0))
+        self.ai_result_widget = scrolledtext.ScrolledText(result_frame, state="disabled", wrap="word")
+        self.ai_result_widget.pack(fill="both", expand=True)
 
     # ------------------------------------------------------------------
     def _log(self, message: str) -> None:
@@ -191,6 +252,117 @@ class TradingAssistantApp:
     def _on_reset_gate_clicked(self) -> None:
         self._controller.reset_gate()
 
+    # ------------------------------------------------------------------
+    # AI Chart Analysis tab
+    # ------------------------------------------------------------------
+    def _load_saved_api_key(self) -> None:
+        try:
+            data = json.loads(CONFIG_PATH.read_text())
+        except (OSError, ValueError):
+            return
+        key = data.get("anthropic_api_key", "")
+        if key:
+            self.api_key_var.set(key)
+            self.remember_key_var.set(True)
+
+    def _save_or_forget_api_key(self) -> None:
+        if self.remember_key_var.get() and self.api_key_var.get().strip():
+            try:
+                CONFIG_PATH.write_text(json.dumps({"anthropic_api_key": self.api_key_var.get().strip()}))
+            except OSError as exc:
+                self._log(f"Could not save API key locally: {exc}")
+        elif CONFIG_PATH.exists():
+            try:
+                CONFIG_PATH.unlink()
+            except OSError:
+                pass
+
+    def _set_preview(self, image_path: str) -> None:
+        try:
+            from PIL import Image, ImageTk
+        except ImportError:
+            self.image_status_var.set(f"Loaded: {Path(image_path).name} (install Pillow to see a preview)")
+            self._image_path = image_path
+            return
+
+        try:
+            img = Image.open(image_path)
+            img.thumbnail(PREVIEW_MAX_SIZE)
+            self._preview_photo = ImageTk.PhotoImage(img)
+        except Exception as exc:
+            messagebox.showerror("Could not open image", str(exc))
+            return
+
+        self.preview_label.configure(image=self._preview_photo, text="")
+        self.image_status_var.set(f"Loaded: {Path(image_path).name}")
+        self._image_path = image_path
+
+    def _on_load_image_clicked(self) -> None:
+        path = filedialog.askopenfilename(
+            title="Choose a chart screenshot",
+            filetypes=[("Images", "*.png *.jpg *.jpeg *.gif *.webp"), ("All files", "*.*")],
+        )
+        if path:
+            self._set_preview(path)
+
+    def _on_paste_image_clicked(self) -> None:
+        try:
+            from PIL import ImageGrab
+        except ImportError:
+            messagebox.showerror(
+                "Pillow not installed",
+                "Pasting from the clipboard needs the Pillow package. Run: pip install Pillow\n"
+                "Or use \"Load Image...\" instead.",
+            )
+            return
+
+        image = ImageGrab.grabclipboard()
+        if image is None:
+            messagebox.showwarning("Nothing to paste", "Copy an image to your clipboard first, then try again.")
+            return
+
+        import tempfile
+        fd, temp_path = tempfile.mkstemp(suffix=".png")
+        import os
+        os.close(fd)
+        image.save(temp_path, "PNG")
+        self._set_preview(temp_path)
+
+    def _on_analyze_clicked(self) -> None:
+        if not self._image_path:
+            messagebox.showwarning("No image", "Load or paste a chart screenshot first.")
+            return
+
+        api_key = self.api_key_var.get().strip()
+        if not api_key:
+            messagebox.showwarning("No API key", "Enter your Anthropic API key first (console.anthropic.com).")
+            return
+
+        self._save_or_forget_api_key()
+        self.analyze_btn.configure(state="disabled")
+        self._set_ai_result("Analyzing... this calls the Anthropic API over the internet, give it a few seconds.")
+
+        threading.Thread(target=self._run_analysis, args=(self._image_path, api_key), daemon=True).start()
+
+    def _run_analysis(self, image_path: str, api_key: str) -> None:
+        from ai_analysis import analyze_chart
+        try:
+            result = analyze_chart(image_path, api_key)
+        except Exception as exc:
+            result = f"Analysis failed: {exc}"
+        self.root.after(0, lambda: self._finish_analysis(result))
+
+    def _finish_analysis(self, result: str) -> None:
+        self._set_ai_result(result)
+        self.analyze_btn.configure(state="normal")
+
+    def _set_ai_result(self, text: str) -> None:
+        self.ai_result_widget.configure(state="normal")
+        self.ai_result_widget.delete("1.0", "end")
+        self.ai_result_widget.insert("1.0", text)
+        self.ai_result_widget.configure(state="disabled")
+
+    # ------------------------------------------------------------------
     def _on_close(self) -> None:
         self._controller.stop()
         if self._data_source is not None:
