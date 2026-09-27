@@ -71,10 +71,11 @@ in by hand. Always glance over the filled-in boxes afterward in case a word
 or number landed in the wrong spot.
 
 GAME STRUCTURE
-There are two board modes, switchable any time from Game Settings on the admin page:
+There are now 4 PLAYERS (not just 2), each with their own name in Game
+Settings. There are two board modes, switchable any time:
 
-- TEAM MODE (default): each of the 2 players has their own 5 questions.
-- SHARED MODE: one shared board of 5 questions that both teams compete on.
+- TEAM MODE (default): each of the 4 players has their own 5 questions.
+- SHARED MODE: one shared board of 5 questions that everyone competes on.
 
 Each question has:
 - 1 Question box
@@ -84,19 +85,37 @@ EVERY QUESTION AND EVERY ANSWER/MARK HAS ITS OWN SHOW/HIDE BUTTON.
 Only items marked Show appear on the public screen. Showing/hiding is purely
 visual — it does NOT change anyone's score by itself.
 
+PLAYERS ARE HIDDEN UNTIL YOU CLICK "SHOW PLAYER"
+A brand new player never appears on the projector screen — not even their
+name or box — until you click "Show Player" for them in the Scoreboard
+panel. This lets you run a 1, 2, 3, or 4-player game just by showing however
+many you're actually using; the rest stay completely off-screen. You can
+still type in questions/answers and edit a hidden player any time — hiding
+only affects the public/projector screen.
+
 SCORING — TWO SEPARATE GAMES
 Team Mode and the Shared Board are treated as two completely separate games
 with their own scores; switching between them never mixes or resets either
-one. Every answer, in both Team Mode and the Shared Board, has "+ [Player 1]"
-and "+ [Player 2]" buttons next to it — click one to award that answer's
-points to whichever team actually got it right (this also lets a team
-"steal" a point from a question that isn't their own, if you want that).
-You can also correct a score by hand any time using the "Correct to" box
-in the Scoreboard panel.
+one. Every answer, in both Team Mode and the Shared Board, has a
+"+ [Player Name]" button for each player next to it — click one to award
+that answer's points to whoever actually got it right (this also lets a
+player "steal" a point from a question that isn't their own, if you want
+that). You can also correct a score by hand any time using the "Correct to"
+box in the Scoreboard panel.
+
+QUICK-ADD SCORE BUTTONS
+Above each player's card in the Scoreboard panel there are 3 quick-add
+buttons (they start as +10, +5, +1). Click one to instantly add that many
+points to that player, no typing needed — handy for games that aren't
+based on the Question/Answer boards at all. You can change what the 3
+numbers are any time: type new numbers into the 3 boxes above the buttons
+and click Save — the buttons relabel themselves to match, for every
+player, right away. The manual "Correct to" box is still there too, for
+any other number.
 
 VOICE CONTROL (admin page, host computer, Chrome browser only)
 Click "Start Listening" on the Voice Control panel, then say things like:
-- "team 1" / "team 2" / "shared board" — choose which board to control
+- "team 1" through "team 4" (or "player 1" through "player 4") / "shared board" — choose which board to control
 - "question 1" through "question 5" — jump to that question
 - "next question" / "previous question"
 - "show question" (or "show question 1" through "show question 5") —

@@ -1,6 +1,6 @@
 {
   "name": "word-arena-tv-offline",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Offline LAN Word Arena TV scoreboard and timer",
   "main": "electron/main.js",
   "scripts": {

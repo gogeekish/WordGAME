@@ -65,7 +65,8 @@ function makePlayer(name) {
     questions: Array.from({ length: QUESTIONS_PER_PLAYER }, makeQuestion),
     teamScore: 0,
     sharedScore: 0,
-    total: 0
+    total: 0,
+    showPlayer: false // hidden on the public screen until the host clicks Show
   };
 }
 
@@ -77,7 +78,8 @@ let state = {
   gameOver: false,
   winner: "",
   image: { data: "", name: "" },
-  players: [makePlayer("PLAYER 1"), makePlayer("PLAYER 2")],
+  quickAdds: [10, 5, 1], // the 3 quick-add score amounts, editable per game
+  players: [makePlayer("PLAYER 1"), makePlayer("PLAYER 2"), makePlayer("PLAYER 3"), makePlayer("PLAYER 4")],
   shared: { questions: Array.from({ length: QUESTIONS_PER_PLAYER }, makeQuestion) }
 };
 

@@ -39,8 +39,10 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 <div class="grid">
 <div><label>Game Title</label><input id="title"></div>
 <div><label>Subtitle</label><input id="subtitle"></div>
-<div><label>Player 1 / Team 1</label><input id="p1"></div>
-<div><label>Player 2 / Team 2</label><input id="p2"></div>
+<div><label>Player 1</label><input id="p1"></div>
+<div><label>Player 2</label><input id="p2"></div>
+<div><label>Player 3</label><input id="p3"></div>
+<div><label>Player 4</label><input id="p4"></div>
 </div>
 <div class="controls">
 <button class="primary" onclick="save()">Save Settings</button>
@@ -83,8 +85,10 @@ School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
 <div class="controls">
 <b style="align-self:center">Paste into:</b>
 <select id="bulkTarget" style="max-width:220px">
-<option value="p0">Team 1 questions</option>
-<option value="p1">Team 2 questions</option>
+<option value="p0">Player 1 questions</option>
+<option value="p1">Player 2 questions</option>
+<option value="p2">Player 3 questions</option>
+<option value="p3">Player 4 questions</option>
 <option value="shared">Shared Board questions</option>
 </select>
 </div>
@@ -129,8 +133,10 @@ School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
 </div>
 <div class="controls">
 <b style="align-self:center">Focus:</b>
-<button class="gray tiny" onclick="setFocus('p0',focus.qi)">Team 1</button>
-<button class="gray tiny" onclick="setFocus('p1',focus.qi)">Team 2</button>
+<button class="gray tiny" onclick="setFocus('p0',focus.qi)">Player 1</button>
+<button class="gray tiny" onclick="setFocus('p1',focus.qi)">Player 2</button>
+<button class="gray tiny" onclick="setFocus('p2',focus.qi)">Player 3</button>
+<button class="gray tiny" onclick="setFocus('p3',focus.qi)">Player 4</button>
 <button class="gray tiny" id="sharedFocusBtn" onclick="setFocus('shared',focus.qi)">Shared Board</button>
 </div>
 <div class="controls">
@@ -145,7 +151,7 @@ School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
 <div id="voiceLog" style="margin-top:8px;font-size:12px;color:#475569;max-height:90px;overflow:auto">Say a command after clicking "Start Listening"…</div>
 <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:bold">Voice command list</summary>
 <div style="font-size:13px;line-height:1.7;margin-top:6px">
-"team 1" / "team 2" / "shared board" — switch which board you're controlling<br>
+"team 1" through "team 4" (or "player 1" through "player 4") / "shared board" — switch which board you're controlling<br>
 "question 1" through "question 5" — jump to that question<br>
 "next question" / "previous question"<br>
 "show question" / "show question 1" through "show question 5" — reveal EVERYTHING for that question (the question, all 5 answers, all 5 points)<br>
@@ -197,7 +203,7 @@ function labelForScope(scope){return scope==="shared"?"Shared Board":state.playe
 function render(){
  if(!state)return;
  $("title").value=state.title;$("subtitle").value=state.subtitle;
- $("p1").value=state.players[0].name;$("p2").value=state.players[1].name;
+ state.players.forEach((p,pi)=>{const el=$("p"+(pi+1));if(el)el.value=p.name;});
  $("imageName").value=state.image.name||"";
  $("timer").textContent=formatTime(state.timer.remaining);
  $("modeTeamBtn").className="modebtn"+(state.mode==="team"?" active":"");
@@ -208,19 +214,42 @@ function render(){
 }
 
 function renderScorePanel(){
- const p=state.players;
  const field=state.mode==="shared"?"sharedScore":"teamScore";
  const label=state.mode==="shared"?"Shared Board Game — Score":"Team Mode Game — Score";
+ const quickAdds=state.quickAdds||[10,5,1];
+ const quickBoxes=quickAdds.map((v,i)=>`<input id="quickadd-${i}" value="${esc(v)}" style="width:60px">`).join(" ");
+ const cards=state.players.map((p,pi)=>{
+  const quickBtns=quickAdds.map(v=>`<button class="tiny green" onclick="quickAdd(${pi},${v})">+${esc(v)}</button>`).join("");
+  return `<div class="scoreCard">
+   <div><b>${esc(p.name)}</b> — Total: <b>${p.total}</b>
+    <button class="tiny ${p.showPlayer?'hidebtn':'showbtn'}" onclick="togglePlayerShow(${pi})">${p.showPlayer?'Hide Player':'Show Player'}</button>
+   </div>
+   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${quickBtns}
+    <label style="margin:0 0 0 10px">Correct to:</label><input id="bonus-p${pi}" value="${esc(p[field])}" style="width:90px"><button class="tiny primary" onclick="saveBonus(${pi})">Save</button>
+   </div>
+  </div>`;
+ }).join("");
  $("scorePanel").innerHTML=`<h2>Scoreboard — ${label}</h2>
- <p style="font-size:12px;color:#475569;margin-top:0">Team Mode and the Shared Board are two separate games — their scores never mix. Use the "+" buttons on each answer to award points; the number below can also be corrected by hand.</p>
- <div class="scoreCard"><div><b>${esc(p[0].name)}</b> — Total: <b>${p[0].total}</b></div>
-  <div class="bonusBox"><label style="margin:0">Correct to:</label><input id="bonus-p0" value="${esc(p[0][field])}"><button class="tiny primary" onclick="saveBonus(0)">Save</button></div></div>
- <div class="scoreCard"><div><b>${esc(p[1].name)}</b> — Total: <b>${p[1].total}</b></div>
-  <div class="bonusBox"><label style="margin:0">Correct to:</label><input id="bonus-p1" value="${esc(p[1][field])}"><button class="tiny primary" onclick="saveBonus(1)">Save</button></div></div>`;
+ <p style="font-size:12px;color:#475569;margin-top:0">Team Mode and the Shared Board are two separate games — their scores never mix. A player stays off the public screen until you click "Show Player" for them.</p>
+ <div class="controls" style="margin-bottom:4px"><b style="align-self:center">Quick-add amounts:</b>${quickBoxes}<button class="tiny primary" onclick="saveQuickAdds()">Save</button></div>
+ ${cards}`;
 }
 function saveBonus(pi){
  const field=state.mode==="shared"?"sharedScore":"teamScore";
  state.players[pi][field]=$("bonus-p"+pi).value;
+ send();
+}
+function quickAdd(pi,amount){
+ const field=state.mode==="shared"?"sharedScore":"teamScore";
+ state.players[pi][field]=(Number(state.players[pi][field])||0)+Number(amount);
+ send();
+}
+function saveQuickAdds(){
+ state.quickAdds=[0,1,2].map(i=>Number($("quickadd-"+i).value)||0);
+ send();
+}
+function togglePlayerShow(pi){
+ state.players[pi].showPlayer=!state.players[pi].showPlayer;
  send();
 }
 function awardScore(scope,qi,ai,playerIndex){
@@ -233,7 +262,7 @@ function awardScore(scope,qi,ai,playerIndex){
 
 function questionCardHTML(scope,qi,q){
  const rows=q.answers.map((a,ai)=>{
-  const award=`<button class="tiny primary" onclick="awardScore('${scope}',${qi},${ai},0)">+ ${esc(state.players[0].name)}</button><button class="tiny primary" onclick="awardScore('${scope}',${qi},${ai},1)">+ ${esc(state.players[1].name)}</button>`;
+  const award=state.players.map((p,pi)=>`<button class="tiny primary" onclick="awardScore('${scope}',${qi},${ai},${pi})">+ ${esc(p.name)}</button>`).join("");
   return `<div class="answer-row"><span class="answer-num">${ai+1}.</span>
    <input id="${idBase(scope,qi,ai)}-text" value="${esc(a.text)}" placeholder="Answer ${ai+1}">
    <input id="${idBase(scope,qi,ai)}-mark" class="mark-input" value="${esc(a.mark)}" placeholder="Mark">
@@ -262,7 +291,7 @@ function renderTeamBoard(){
 function renderSharedBoard(){
  const root=$("board");root.innerHTML="";
  const box=document.createElement("div");box.className="panel";
- box.innerHTML=`<h2>Shared Board</h2><p style="font-size:13px;color:#475569">Use the "+ ${esc(state.players[0].name)}" / "+ ${esc(state.players[1].name)}" buttons to award that answer's points to a team once it's guessed.</p>`+
+ box.innerHTML=`<h2>Shared Board</h2><p style="font-size:13px;color:#475569">Use the "+ [Player Name]" buttons to award that answer's points to whichever player guessed it.</p>`+
   state.shared.questions.map((q,qi)=>questionCardHTML('shared',qi,q)).join("");
  root.appendChild(box);
 }
@@ -347,9 +376,19 @@ function importBulk(){
  $("bulkResult").innerHTML=msg;
 }
 
-function save(){state.title=$("title").value;state.subtitle=$("subtitle").value;state.players[0].name=$("p1").value||"PLAYER 1";state.players[1].name=$("p2").value||"PLAYER 2";send()}
+function save(){
+ state.title=$("title").value;state.subtitle=$("subtitle").value;
+ state.players.forEach((p,pi)=>{const el=$("p"+(pi+1));if(el)p.name=el.value||("PLAYER "+(pi+1));});
+ send();
+}
 function send(){if(window.ANDROID_OFFLINE_MODE)saveDraft();socket.emit("updateState",state)}
-function gameOver(){state.gameOver=true;const a=state.players[0].total,b=state.players[1].total;state.winner=a>b?state.players[0].name:b>a?state.players[1].name:a===b?"DRAW":"";send()}
+function gameOver(){
+ state.gameOver=true;
+ const best=Math.max(...state.players.map(p=>p.total));
+ const winners=state.players.filter(p=>p.total===best).map(p=>p.name);
+ state.winner=winners.length>1?"DRAW — "+winners.join(" & "):winners[0];
+ send();
+}
 function clearWinner(){state.gameOver=false;state.winner="";send()}
 function uploadImage(){
  const f=$("imageFile").files[0]; if(!f)return alert("Choose an image first.");
@@ -407,10 +446,11 @@ if(!window.ANDROID_OFFLINE_MODE)loadConnectionInfo();
 function defaultState(){
  const mkAnswer=()=>({text:"",mark:"",showAnswer:false,showMark:false});
  const mkQuestion=()=>({question:"",showQuestion:false,answers:Array.from({length:5},mkAnswer)});
- const mkPlayer=name=>({name,questions:Array.from({length:5},mkQuestion),teamScore:0,sharedScore:0,total:0});
+ const mkPlayer=name=>({name,questions:Array.from({length:5},mkQuestion),teamScore:0,sharedScore:0,total:0,showPlayer:false});
  return {title:"WORD ARENA TV",subtitle:"OFFLINE WORD GAME",mode:"team",
   timer:{running:false,remaining:30,lastStarted:null},gameOver:false,winner:"",image:{data:"",name:""},
-  players:[mkPlayer("PLAYER 1"),mkPlayer("PLAYER 2")],shared:{questions:Array.from({length:5},mkQuestion)}};
+  quickAdds:[10,5,1],
+  players:[mkPlayer("PLAYER 1"),mkPlayer("PLAYER 2"),mkPlayer("PLAYER 3"),mkPlayer("PLAYER 4")],shared:{questions:Array.from({length:5},mkQuestion)}};
 }
 function saveDraft(){try{localStorage.setItem('waTvDraft',JSON.stringify(state))}catch(e){}}
 function updateSyncStatus(s){
@@ -515,7 +555,7 @@ function toggleListening(){
 }
 function handleVoiceCommand(text){
  let m;
- if(m=text.match(/^(?:team|player)\s+(\w+)$/)){const n=parseNumber(m[1]);if(n===1||n===2){setFocus('p'+(n-1),focus.qi);return}}
+ if(m=text.match(/^(?:team|player)\s+(\w+)$/)){const n=parseNumber(m[1]);if(n>=1&&n<=state.players.length){setFocus('p'+(n-1),focus.qi);return}}
  if(/^shared(\s+board)?$/.test(text)){setFocus('shared',focus.qi);return}
  if(m=text.match(/^(?:go to |focus )?question\s+(\w+)$/)){const n=parseNumber(m[1]);if(n>=1&&n<=5){setFocus(focus.scope,n-1)}return}
  if(/^next question$/.test(text)){setFocus(focus.scope,Math.min(4,focus.qi+1));return}

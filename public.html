@@ -10,16 +10,17 @@
 .timer{position:fixed;left:12px;top:12px;z-index:20;background:#111827;border:2px solid #ffffff40;border-radius:14px;padding:10px 16px;text-align:center;min-width:100px}.timer small{display:block;font-size:11px;opacity:.7}.timer strong{font-size:clamp(30px,4vw,55px)}
 .corner{position:fixed;right:12px;top:12px;z-index:20;text-align:center;max-width:130px}.corner img{width:100px;height:100px;object-fit:contain;border-radius:10px}.corner div{font-size:12px;margin-top:3px}
 .scorebar{display:flex;justify-content:center;gap:40px;padding:10px;font-size:clamp(18px,2.6vw,34px);font-weight:900}.scorebar span{color:#fbbf24;margin-left:8px}
-.board.team{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px}
+.board.team{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;padding:14px}
 .board.shared{padding:14px}
 .shared-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;max-width:1400px;margin:auto}
+.waiting{text-align:center;padding:60px 20px;opacity:.6;font-size:clamp(20px,3vw,36px)}
 .player{background:#111827;border-radius:16px;padding:12px;min-width:0}.player h2{text-align:center;margin:0 0 8px;font-size:clamp(20px,2.3vw,34px)}.total{text-align:center;font-size:clamp(18px,2vw,28px);font-weight:900;margin-bottom:8px}
 .section{background:#1f2937;border-radius:12px;margin:9px 0;padding:9px}.section h3{margin:0 0 7px;text-align:center;font-size:18px;color:#dbeafe}
 .item{border-radius:9px;background:#0b1220;margin:6px 0;padding:8px}.label{font-size:11px;text-transform:uppercase;opacity:.65;font-weight:bold}.value{font-size:clamp(16px,1.7vw,25px);font-weight:800;white-space:pre-wrap;word-break:break-word;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .question{border-left:4px solid #f59e0b}.answer{border-left:4px solid #3b82f6}
 .mark-badge{background:#22c55e;color:#04150a;padding:2px 12px;border-radius:20px;font-weight:900;font-size:.85em}
 .over{position:fixed;inset:0;background:#000e;z-index:50;display:none;align-items:center;justify-content:center;text-align:center;padding:20px}.over.show{display:flex}.over h2{font-size:clamp(45px,8vw,110px);margin:0}.over p{font-size:clamp(25px,4vw,55px)}
-@media(max-width:850px){.board.team{grid-template-columns:1fr}.corner{max-width:90px}.corner img{width:70px;height:70px}.scorebar{gap:18px;flex-wrap:wrap}}
+@media(max-width:850px){.corner{max-width:90px}.corner img{width:70px;height:70px}.scorebar{gap:18px;flex-wrap:wrap}}
 @media print{body{background:#fff;color:#000}}
 </style>
 </head>
@@ -54,9 +55,11 @@ function questionBlockHTML(q,qi){
 function renderTeam(){
  const root=document.getElementById("board");
  root.className="board team";
- root.innerHTML="";
  document.getElementById("scorebar").style.display="none";
- state.players.forEach(p=>{
+ const shown=state.players.filter(p=>p.showPlayer);
+ if(!shown.length){root.innerHTML=`<div class="waiting">Waiting for players…</div>`;return}
+ root.innerHTML="";
+ shown.forEach(p=>{
   const el=document.createElement("div");el.className="player";
   el.innerHTML=`<h2>${esc(p.name)}</h2><div class="total">TOTAL SCORE: ${esc(p.total)}</div>`+
    p.questions.map((q,qi)=>questionBlockHTML(q,qi)).join("");
@@ -69,8 +72,10 @@ function renderShared(){
  root.className="board shared";
  root.innerHTML=`<div class="shared-grid">${state.shared.questions.map((q,qi)=>questionBlockHTML(q,qi)).join("")}</div>`;
  const bar=document.getElementById("scorebar");
+ const shown=state.players.filter(p=>p.showPlayer);
+ if(!shown.length){bar.style.display="none";return}
  bar.style.display="flex";
- bar.innerHTML=`${esc(state.players[0].name)}<span>${state.players[0].total}</span> &nbsp;—&nbsp; ${esc(state.players[1].name)}<span>${state.players[1].total}</span>`;
+ bar.innerHTML=shown.map(p=>`${esc(p.name)}<span>${p.total}</span>`).join(" &nbsp;—&nbsp; ");
 }
 
 function render(){
