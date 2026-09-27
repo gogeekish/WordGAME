@@ -49,6 +49,26 @@ BUILDING YOUR OWN .EXE (only needed if you change the code)
    "Word Arena TV 1.0.0.exe" — that one file is all you need to copy
    around and share; nobody else needs to install Node.js to run it.
 
+PASTE ALL QUESTIONS AT ONCE
+Instead of typing into every box by hand, you can paste a whole batch of
+questions into the "Paste All Questions, Answers & Scores" box on the admin
+page and click Import. Start each question with its number (1-5), then list
+its 5 answers with their points anywhere after that — spacing doesn't
+matter. Example:
+
+  1  Name something people do immediately after waking up. | Check phone 35
+  Brush teeth 25
+  Pray 20   Take a bath 12   Eat 8
+
+  2  Name something people take to school.
+  School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8
+
+Pick which board it goes into (Team 1, Team 2, or Shared Board) before you
+click Import. This only fills in the boxes — nothing appears on the public
+screen until you press that item's own Show button, exactly like typing it
+in by hand. Always glance over the filled-in boxes afterward in case a word
+or number landed in the wrong spot.
+
 GAME STRUCTURE
 There are two board modes, switchable any time from Game Settings on the admin page:
 

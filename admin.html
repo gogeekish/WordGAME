@@ -54,6 +54,32 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 </div>
 </div>
 
+<div class="panel">
+<h2>📋 Paste All Questions, Answers &amp; Scores</h2>
+<p style="font-size:13px;color:#475569;margin-top:0">Paste as many questions as you like at once. Start each question with its number (1-5), then list its answers with their points anywhere after — any spacing is fine. Example:</p>
+<pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap;margin:0 0 10px">1  Name something people do immediately after waking up. | Check phone 35
+Brush teeth 25
+Pray 20   Take a bath 12   Eat 8
+
+2  Name something people take to school.
+School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
+<div class="controls">
+<b style="align-self:center">Paste into:</b>
+<select id="bulkTarget" style="max-width:220px">
+<option value="p0">Team 1 questions</option>
+<option value="p1">Team 2 questions</option>
+<option value="shared">Shared Board questions</option>
+</select>
+</div>
+<textarea id="bulkText" style="min-height:160px" placeholder="Paste your questions, answers and scores here..."></textarea>
+<div class="controls">
+<button class="primary" onclick="importBulk()">Import — Fill In The Boxes Below</button>
+<button class="gray" onclick="$('bulkText').value=''">Clear Box</button>
+</div>
+<div id="bulkResult" style="margin-top:8px;font-size:13px"></div>
+<p style="font-size:12px;color:#475569;margin-bottom:0">Importing only fills in the boxes below — nothing appears on the public screen until you click its own Show button, same as always.</p>
+</div>
+
 <div class="panel" id="projectorPanel" style="display:none">
 <h2>🖥️ Second Screen / Projector</h2>
 <p style="font-size:13px;color:#475569;margin-top:0">In Windows, press the <b>Windows key + P</b> and choose <b>Extend</b> first. Then use the buttons below to send the game screen to the projector.</p>
@@ -224,6 +250,71 @@ function awardBonus(qi,ai,playerIndex){
  send();
 }
 function setMode(mode){state.mode=mode;send()}
+
+/* ---------- Bulk paste: questions + answers + marks ---------- */
+function isHeaderLine(line){
+ const m=line.match(/^\s*(\d{1,2})\s+(.+)$/);
+ if(!m)return null;
+ const core=m[2].split("|")[0].trim();
+ if(/\d$/.test(core))return null; // ends in a digit -> it's an answer line, not a question header
+ return {index:parseInt(m[1],10),rest:m[2]};
+}
+function parseBulkText(text){
+ const lines=text.replace(/ /g," ").split(/\r?\n/);
+ const questions=[];
+ let current=null;
+ lines.forEach(line=>{
+  if(!line.trim())return;
+  const header=isHeaderLine(line);
+  if(header){
+   if(current)questions.push(current);
+   let rest=header.rest,question=rest,tail="";
+   const pi=rest.indexOf("|");
+   if(pi>=0){question=rest.slice(0,pi);tail=rest.slice(pi+1)}
+   current={index:header.index,question:question.trim(),blob:tail?tail+" ":""};
+  } else if(current){
+   current.blob+=line+" ";
+  }
+ });
+ if(current)questions.push(current);
+ const answerRe=/([A-Za-z][A-Za-z'()/&.]*(?:[\s\-–—]+[A-Za-z][A-Za-z'()/&.]*)*)[\s\-–—:]+(\d+)/g;
+ questions.forEach(q=>{
+  const answers=[];
+  let m;
+  answerRe.lastIndex=0;
+  while((m=answerRe.exec(q.blob))&&answers.length<5){
+   answers.push({text:m[1].trim(),mark:m[2]});
+  }
+  while(answers.length<5)answers.push({text:"",mark:""});
+  q.answers=answers;
+ });
+ return questions;
+}
+function importBulk(){
+ const target=$("bulkTarget").value;
+ const text=$("bulkText").value;
+ const parsed=parseBulkText(text);
+ if(!parsed.length){
+  $("bulkResult").innerHTML='<span style="color:#dc2626">Could not find any numbered questions. Make sure each question starts with its number, like "1 ..." on its own.</span>';
+  return;
+ }
+ const qArr=getQArr(target);
+ let filled=0,skipped=[];
+ parsed.forEach(q=>{
+  if(q.index<1||q.index>qArr.length){skipped.push(q.index);return}
+  const slot=qArr[q.index-1];
+  slot.question=q.question;
+  slot.showQuestion=false;
+  slot.answers=q.answers.map(a=>({text:a.text,mark:a.mark,showAnswer:false,showMark:false}));
+  filled++;
+ });
+ send();render();
+ let msg=`Imported ${filled} question${filled===1?'':'s'} into ${esc(labelForScope(target))}. Nothing is shown on the public screen yet — use the Show buttons below when you're ready.`;
+ if(skipped.length)msg+=` (Skipped question number${skipped.length===1?'':'s'} ${skipped.join(', ')} — only 1–5 are allowed.)`;
+ if(target==="shared"&&state.mode!=="shared")msg+=' Switch to "Shared Mode" above to see these boxes.';
+ if(target!=="shared"&&state.mode!=="team")msg+=' Switch to "Team Mode" above to see these boxes.';
+ $("bulkResult").innerHTML=msg;
+}
 
 function save(){state.title=$("title").value;state.subtitle=$("subtitle").value;state.players[0].name=$("p1").value||"PLAYER 1";state.players[1].name=$("p2").value||"PLAYER 2";send()}
 function send(){socket.emit("updateState",state)}
