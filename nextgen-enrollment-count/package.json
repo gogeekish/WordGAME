@@ -1,0 +1,27 @@
+{
+  "name": "nextgen-enrollment-count",
+  "version": "1.0.0",
+  "description": "Paste a document, paste search words, count matches by Month+Year, export to Excel",
+  "main": "electron/main.js",
+  "scripts": {
+    "app": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.nextgen.enrollmentcount",
+    "productName": "NextGen Enrollment Count",
+    "files": [
+      "index.html",
+      "vendor/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable"
+    }
+  }
+}
