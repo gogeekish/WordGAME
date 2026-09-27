@@ -8,9 +8,9 @@ WHAT IT DOES
 4. The app finds every line that has a date like "03-Aug-2026" in it, works
    out its Month + Year (for example "Aug 2026"), and counts how many times
    each of your search words appears in that Month + Year.
-5. A table appears on screen (one row per Month+Year that actually shows up
-   in your data — for example "Jan 2026" and "Jan 2025" are always counted
-   separately, never mixed together).
+5. A table appears on screen — one row per search word, one column per
+   Month+Year that actually shows up in your data (for example "Jan 2026"
+   and "Jan 2025" are always counted separately, never mixed together).
 6. Click "Download Excel (.xlsx)" to save the full table as a real Excel
    file. The file is named "NextGen-Enrollment-Count-<date>.xlsx" and is
    saved to your Downloads folder.

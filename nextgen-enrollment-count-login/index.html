@@ -171,33 +171,24 @@
 </div>
 </div>
 
-<script src="/__neutralino_globals.js"></script>
-<script src="js/neutralino.js"></script>
 <script src="vendor/totp-shared.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
 <script>
 /* ===================== PLATFORM DETECTION ===================== */
-const IS_NEUTRALINO = typeof Neutralino !== 'undefined';
+const IS_ELECTRON = typeof window.nextgenAPI !== 'undefined';
 const IS_ANDROID = typeof AndroidBridge !== 'undefined';
 
 /* ===================== PERSISTENT STORAGE (survives copying the app folder) ===================== */
-function storePath(){
-  return (window.NL_PATH || '.') + '/nextgen-login-store.json';
-}
-
 async function loadStore(){
-  if (IS_NEUTRALINO){
-    try {
-      const txt = await Neutralino.filesystem.readFile(storePath());
-      return JSON.parse(txt);
-    } catch(e){ return null; }
+  if (IS_ELECTRON){
+    return await window.nextgenAPI.readActivation();
   }
   try { return JSON.parse(localStorage.getItem('nextgen_login_store') || 'null'); } catch(e){ return null; }
 }
 
 async function saveStore(data){
-  if (IS_NEUTRALINO){
-    await Neutralino.filesystem.writeFile(storePath(), JSON.stringify(data));
+  if (IS_ELECTRON){
+    await window.nextgenAPI.writeActivation(data);
     return;
   }
   localStorage.setItem('nextgen_login_store', JSON.stringify(data));
@@ -222,20 +213,14 @@ function validOfflineCodesNow(){
 }
 
 /* ===================== SENDING THE EMAIL DIRECTLY (no third-party service) ===================== */
-function psEscape(s){
-  return String(s).replace(/'/g, "''");
-}
-
-async function sendOtpEmailWindows(toEmail, fromEmail, appPassword, code){
-  const script = [
-    "$ErrorActionPreference = 'Stop'",
-    "$pass = ConvertTo-SecureString '" + psEscape(appPassword) + "' -AsPlainText -Force",
-    "$cred = New-Object System.Management.Automation.PSCredential('" + psEscape(fromEmail) + "', $pass)",
-    "Send-MailMessage -From '" + psEscape(fromEmail) + "' -To '" + psEscape(toEmail) + "' -Subject 'Your NextGen Enrollment Count login code' -Body 'Your login code is: " + psEscape(code) + "' -SmtpServer 'smtp.gmail.com' -Port 587 -UseSsl -Credential $cred"
-  ].join('\n');
-  const result = await Neutralino.os.execCommand('powershell -NoProfile -NonInteractive -Command -', { stdIn: script });
-  if (result.exitCode !== 0){
-    throw new Error(result.stdErr || result.stdOut || ('PowerShell exit code ' + result.exitCode));
+async function sendOtpEmailElectron(toEmail, fromEmail, appPassword, code){
+  const result = await window.nextgenAPI.sendOtpEmail({
+    fromEmail, appPassword, toEmail,
+    subject: 'Your NextGen Enrollment Count login code',
+    body: 'Your login code is: ' + code
+  });
+  if (!result.ok){
+    throw new Error(result.error || 'Unknown error sending email.');
   }
 }
 
@@ -248,7 +233,7 @@ function sendOtpEmailAndroid(toEmail, fromEmail, appPassword, code){
 }
 
 async function sendOtpEmail(toEmail, fromEmail, appPassword, code){
-  if (IS_NEUTRALINO) return sendOtpEmailWindows(toEmail, fromEmail, appPassword, code);
+  if (IS_ELECTRON) return sendOtpEmailElectron(toEmail, fromEmail, appPassword, code);
   if (IS_ANDROID) return sendOtpEmailAndroid(toEmail, fromEmail, appPassword, code);
   throw new Error('Sending email only works in the Windows or Android app.');
 }
@@ -400,13 +385,7 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
   await boot();
 });
 
-if (IS_NEUTRALINO){
-  Neutralino.init();
-  Neutralino.events.on('windowClose', () => Neutralino.app.exit());
-  boot();
-} else {
-  boot();
-}
+boot();
 
 /* ===================== COUNTING TOOL (same logic as other editions) ===================== */
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -490,11 +469,11 @@ function runCount(){
     return;
   }
 
-  const header = ["Month"].concat(words);
+  const header = ["Search Word"].concat(monthLabels);
   const rows = [header];
-  monthLabels.forEach(label => {
-    const row = [label];
-    words.forEach(w => row.push((counts[label] && counts[label][w]) || 0));
+  words.forEach(w => {
+    const row = [w];
+    monthLabels.forEach(label => row.push((counts[label] && counts[label][w]) || 0));
     rows.push(row);
   });
   lastRows = rows;
@@ -504,7 +483,7 @@ function runCount(){
     html += "<tr>" + rows[i].map((c,ci) => `<td>${escapeHtml(String(c))}</td>`).join('') + "</tr>";
   }
   resultTable.innerHTML = html;
-  resultSub.textContent = monthLabels.length + " month" + (monthLabels.length===1?"":"s") + " found, " + words.length + " search word" + (words.length===1?"":"s") + " — scroll sideways to see every column.";
+  resultSub.textContent = words.length + " search word" + (words.length===1?"":"s") + " found across " + monthLabels.length + " month" + (monthLabels.length===1?"":"s") + " — scroll down for every word.";
   resultCard.style.display = 'block';
   msg.className = 'msg ok';
   msg.textContent = 'Done! Scroll down to see your results.';

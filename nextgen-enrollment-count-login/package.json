@@ -1,0 +1,31 @@
+{
+  "name": "nextgen-enrollment-count-login",
+  "version": "1.0.0",
+  "description": "NextGen Enrollment Count with a direct-email OTP login gate (no third-party service)",
+  "main": "electron/main.js",
+  "scripts": {
+    "app": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.nextgen.enrollmentcount.login",
+    "productName": "NextGen Enrollment Count (Login Edition)",
+    "files": [
+      "index.html",
+      "vendor/**/*",
+      "electron/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "portable"
+    }
+  }
+}

@@ -13,10 +13,10 @@ HOW IT WORKS
 3. Type the code in — you're now permanently signed in. The app remembers
    this by itself; it will never ask you to sign in again on this
    installation, even after closing and reopening it.
-4. If you ever copy the whole app folder (the .exe + resources.neu + the
-   small file next to them that remembers you're signed in) to a different
-   computer, that copy is ALSO already signed in — because the "you're
-   signed in" marker travels with the files, not with the computer.
+4. If you ever copy the whole app folder (the .exe + the small file next to
+   it that remembers you're signed in) to a different computer, that copy
+   is ALSO already signed in — because the "you're signed in" marker
+   travels with the files, not with the computer.
 5. At the very top of the login/setup screen there is always a second
    option: "Have a code from the NextGen Login Code app? Click here" — if
    you'd rather not deal with email at all, open the separate offline
@@ -37,16 +37,15 @@ STEP 1 — GET A GMAIL "APP PASSWORD" (one time, ~2 minutes)
 ============================================================
 HOW TO RUN THE WINDOWS VERSION
 ============================================================
-1. Copy BOTH "NextGenEnrollmentCount-Login-win_x64.exe" AND
-   "resources.neu" into the SAME folder (they must stay together).
-2. Double-click the .exe.
-3. Windows may show a "protected your PC" warning — click "More info" then
+1. Copy "NextGen Enrollment Count (Login Edition) 1.0.0.exe" anywhere on
+   your Windows computer — it's one single file, nothing else needed.
+2. Double-click it. Windows may show a "protected your PC" warning because
+   the app isn't signed by a paid certificate — click "More info" then
    "Run anyway".
-4. Needs Windows 10/11 with "WebView2" (already built into almost every
-   modern Windows PC). If it won't open, search "WebView2 Runtime" and
-   install Microsoft's free installer once.
-5. The app sends the email itself using Windows' own built-in PowerShell —
-   nothing extra to install.
+3. Once you complete Setup, the app quietly creates a small file called
+   "nextgen-login-store.json" in the SAME folder as the .exe — that's the
+   file that remembers you're signed in. Leave it there; if you copy the
+   app elsewhere, copy that file along with it.
 
 ============================================================
 HOW TO INSTALL THE ANDROID VERSION
@@ -72,11 +71,10 @@ NOTES
 - This is a separate, third way to log in — the plain Offline Edition and
   the offline "Code Login Edition" (with its separate Login Code app) both
   still exist and still work exactly as before. Pick whichever fits you.
-- This Windows build is small (a few MB) because it uses Windows' own
-  built-in WebView2 instead of bundling a whole browser.
+- This is a normal single-file Electron .exe (same style as the Offline
+  Edition), so there's no second file to keep track of.
 
 BUILDING YOUR OWN COPIES (only needed if you change the code)
-- Windows/Linux/Mac: run "neu build --release" (needs the free
-  @neutralinojs/neu command-line tool). Output appears in the "dist" folder.
+- Windows: npm install, then npm run dist (finished file in "dist" folder)
 - Android: run android/prepare-assets.sh, then from the "android" folder,
   run: gradle assembleDebug
