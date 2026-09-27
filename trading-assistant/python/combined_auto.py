@@ -15,6 +15,7 @@ import strategy1_sweep_wick as s1
 import strategy2_bos_fvg as s2
 import strategy3_wick_sweep_after as s3
 from broker import Broker, OrderRequest
+from levels import fixed_distance_levels
 
 
 @dataclass
@@ -33,12 +34,7 @@ def _s1_orders(
 ) -> List[TaggedOrder]:
     orders = []
     for signal in s1.find_signals(candles, lookback, tolerance_ratio):
-        if signal.direction == "bullish":
-            sl = signal.entry_price - stop_distance
-            tp = signal.entry_price + stop_distance * reward_multiple
-        else:
-            sl = signal.entry_price + stop_distance
-            tp = signal.entry_price - stop_distance * reward_multiple
+        sl, tp = fixed_distance_levels(signal.direction, signal.entry_price, stop_distance, reward_multiple)
         orders.append(TaggedOrder("Strategy 1", signal.time, signal.direction, signal.entry_price, sl, tp))
     return orders
 
@@ -62,12 +58,7 @@ def _s3_orders(
 ) -> List[TaggedOrder]:
     orders = []
     for signal in s3.find_signals(candles, lookback, tolerance_ratio, max_wait_bars):
-        if signal.direction == "bullish":
-            sl = signal.entry_price - stop_distance
-            tp = signal.entry_price + stop_distance * reward_multiple
-        else:
-            sl = signal.entry_price + stop_distance
-            tp = signal.entry_price - stop_distance * reward_multiple
+        sl, tp = fixed_distance_levels(signal.direction, signal.entry_price, stop_distance, reward_multiple)
         orders.append(TaggedOrder("Strategy 3", signal.time, signal.direction, signal.entry_price, sl, tp))
     return orders
 

@@ -9,6 +9,7 @@ closes, the next qualifying signal is free to trade again (the "reboot").
 from typing import List
 
 from broker import Broker, OrderRequest
+from levels import fixed_distance_levels
 from strategy3_wick_sweep_after import Candle, Signal, find_signals
 
 
@@ -34,12 +35,9 @@ def evaluate_and_trade(
         if broker.has_open_position(symbol):
             continue  # already in a trade - wait for it to close before trading again
 
-        if signal.direction == "bullish":
-            stop_loss = signal.entry_price - stop_distance
-            take_profit = signal.entry_price + stop_distance * reward_multiple
-        else:
-            stop_loss = signal.entry_price + stop_distance
-            take_profit = signal.entry_price - stop_distance * reward_multiple
+        stop_loss, take_profit = fixed_distance_levels(
+            signal.direction, signal.entry_price, stop_distance, reward_multiple
+        )
 
         result = broker.place_order(OrderRequest(
             symbol=symbol,
