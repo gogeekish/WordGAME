@@ -1,0 +1,424 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NextGen Enrollment Count</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#1e293b; --card2:#111827; --ink:#f1f5f9; --sub:#94a3b8;
+    --accent:#22c55e; --accent2:#3b82f6; --line:#334155; --warn:#fbbf24;
+  }
+  *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--ink)}
+  .page{max-width:1200px;margin:0 auto;padding:28px 24px 60px}
+  .top{text-align:center;margin-bottom:22px}
+  .top h1{font-size:32px;margin:0 0 6px;font-weight:900;letter-spacing:.3px}
+  .top p{margin:0;color:var(--sub);font-size:15px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+  .card h2{margin:0 0 10px;font-size:16px;color:var(--warn)}
+  .card h2 .n{display:inline-block;background:var(--warn);color:#111;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-size:13px;margin-right:8px}
+  textarea{width:100%;min-height:220px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;color:#e2e8f0;font-family:Consolas,monospace;resize:vertical}
+  .hint{color:var(--sub);font-size:12px;margin-top:8px}
+  .count{color:#7dd3fc;font-size:12px;margin-top:4px;font-weight:bold}
+  .btnrow{text-align:center;margin:20px 0}
+  button.primary{background:var(--accent);color:#04150a;font-weight:900;font-size:17px;padding:15px 38px;border-radius:14px;border:none;cursor:pointer;box-shadow:0 6px 0 #15803d}
+  button.primary:active{transform:translateY(3px);box-shadow:0 3px 0 #15803d}
+  button.primary:disabled{opacity:.5;cursor:not-allowed}
+  .msg{text-align:center;margin-top:10px;font-size:14px;min-height:20px}
+  .msg.err{color:#f87171}
+  .msg.ok{color:#4ade80}
+  .resultcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:none}
+  .resultcard h2{margin:0 0 4px;font-size:16px;color:var(--accent2)}
+  .resultcard .sub{color:var(--sub);font-size:13px;margin-bottom:12px}
+  .tablewrap{overflow-x:auto;max-width:100%;border-radius:10px;border:1px solid var(--line)}
+  table{border-collapse:collapse;font-size:13px;min-width:100%}
+  th,td{padding:8px 12px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{background:#0b1220;color:#93c5fd;font-size:11px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0}
+  td:first-child,th:first-child{text-align:left;color:#e2e8f0;font-weight:700;position:sticky;left:0;background:var(--card2)}
+  tr:last-child td{border-bottom:none}
+  .downloadrow{text-align:center;margin-top:16px}
+  button.dl{background:var(--accent2);color:#fff;font-weight:800;font-size:14px;padding:10px 22px;border-radius:10px;border:none;cursor:pointer}
+  .note{max-width:1200px;margin:20px auto 0;background:#1e293b;border:1px solid var(--line);border-radius:12px;padding:12px 16px;color:#cbd5e1;font-size:12px;line-height:1.6}
+
+  /* gate screens (setup + login) */
+  .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .gatecard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px 32px;max-width:420px;width:100%}
+  .gatecard h1{font-size:22px;margin:0 0 6px;text-align:center}
+  .gatecard p.sub{color:var(--sub);font-size:13px;text-align:center;margin:0 0 20px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:bold;text-transform:uppercase;letter-spacing:.3px}
+  .field input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:15px}
+  .field input:focus{outline:2px solid var(--accent2)}
+  .gatebtn{width:100%;background:var(--accent);color:#04150a;font-weight:900;font-size:16px;padding:13px;border-radius:10px;border:none;cursor:pointer;margin-top:6px}
+  .gatebtn:disabled{opacity:.5;cursor:not-allowed}
+  .linkbtn{display:block;text-align:center;margin-top:14px;color:#93c5fd;font-size:13px;cursor:pointer;background:none;border:none}
+  .gatemsg{text-align:center;margin-top:12px;font-size:13px;min-height:18px}
+  .gatemsg.err{color:#f87171}
+  .gatemsg.ok{color:#4ade80}
+  .topbar{display:none;text-align:right;max-width:1200px;margin:0 auto;padding:10px 24px 0}
+  .topbar button{background:none;border:1px solid var(--line);color:var(--sub);font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP SCREEN (first run only) ============ -->
+<div class="gate" id="setupGate">
+  <div class="gatecard">
+    <h1>🔧 One-Time Setup</h1>
+    <p class="sub">This app emails you a login code using a free service called EmailJS, so no password ever needs to be stored here. Paste the 3 codes from your EmailJS account below.</p>
+    <div class="field">
+      <label>EmailJS Service ID</label>
+      <input id="setupServiceId" placeholder="e.g. service_abc1234">
+    </div>
+    <div class="field">
+      <label>EmailJS Template ID</label>
+      <input id="setupTemplateId" placeholder="e.g. template_xyz9876">
+    </div>
+    <div class="field">
+      <label>EmailJS Public Key</label>
+      <input id="setupPublicKey" placeholder="e.g. AbCdEfGhIjKlMnOp">
+    </div>
+    <div class="field">
+      <label>Your Email (codes always go here)</label>
+      <input id="setupRecipient" placeholder="you@example.com">
+    </div>
+    <button class="gatebtn" id="setupSaveBtn">Save Setup</button>
+    <div class="gatemsg" id="setupMsg"></div>
+  </div>
+</div>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div class="gate hidden" id="loginGate">
+  <div class="gatecard">
+    <h1>🔐 Login Required</h1>
+    <p class="sub">A 6-digit code will be emailed to <b id="loginRecipientLabel"></b></p>
+    <button class="gatebtn" id="sendCodeBtn">Send Code to My Email</button>
+    <div id="codeEntryBlock" class="hidden" style="margin-top:16px">
+      <div class="field">
+        <label>Enter the 6-digit code</label>
+        <input id="otpInput" maxlength="6" inputmode="numeric" placeholder="000000">
+      </div>
+      <button class="gatebtn" id="verifyBtn">Verify &amp; Continue</button>
+    </div>
+    <div class="gatemsg" id="loginMsg"></div>
+    <button class="linkbtn" id="redoSetupBtn">Change Setup</button>
+  </div>
+</div>
+
+<!-- ============ MAIN APP (shown after login) ============ -->
+<div id="mainApp" class="hidden">
+<div class="topbar" id="topbar"><button id="logoutBtn">Log Out</button></div>
+<div class="page">
+  <div class="top">
+    <h1>📊 NextGen Enrollment Count</h1>
+    <p>Paste your file. Paste the words you want to find. Click one button. Get an Excel file.</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2><span class="n">1</span>Paste Your Document</h2>
+      <textarea id="docBox" placeholder="Paste your whole file here (any length)..."></textarea>
+      <div class="hint">Just copy your whole file and paste it in — no need to clean it up first.</div>
+      <div class="count" id="docCount">0 lines pasted</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">2</span>Words / IDs to Search</h2>
+      <textarea id="wordsBox" placeholder="Paste one word or ID per line — you can paste 200 or more at once."></textarea>
+      <div class="hint">One word or ID per line. No limit — paste as many as you need.</div>
+      <div class="count" id="wordsCount">0 search words</div>
+    </div>
+  </div>
+
+  <div class="btnrow">
+    <button class="primary" id="runBtn">Count Results</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="resultcard" id="resultCard">
+    <h2>Results</h2>
+    <div class="sub" id="resultSub"></div>
+    <div class="tablewrap"><table id="resultTable"></table></div>
+    <div class="downloadrow"><button class="dl" id="downloadBtn">📄 Download Excel (.xlsx)</button></div>
+  </div>
+
+  <div class="note">
+    <b>Why "Jul 2026" and not just "Jul"?</b> Each row is a real Month + Year pair (like "Jan 2026" vs "Jan 2025" —
+    they are counted separately), and only months that actually appear in your pasted file get a row.
+  </div>
+</div>
+</div>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script>
+/* ===================== SETTINGS STORAGE ===================== */
+const SETTINGS_KEY = 'nextgen_login_settings_v1';
+function loadSettings(){
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); } catch(e){ return null; }
+}
+function saveSettings(s){
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e){}
+}
+
+const setupGate = document.getElementById('setupGate');
+const loginGate = document.getElementById('loginGate');
+const mainApp = document.getElementById('mainApp');
+const topbar = document.getElementById('topbar');
+
+function showOnly(el){
+  [setupGate, loginGate, mainApp].forEach(x => x.classList.add('hidden'));
+  topbar.style.display = 'none';
+  el.classList.remove('hidden');
+}
+
+function boot(){
+  const s = loadSettings();
+  if (!s || !s.serviceId || !s.templateId || !s.publicKey || !s.recipient){
+    showOnly(setupGate);
+    return;
+  }
+  if (sessionStorage.getItem('nextgen_logged_in') === 'yes'){
+    showOnly(mainApp);
+    topbar.style.display = 'block';
+    return;
+  }
+  document.getElementById('loginRecipientLabel').textContent = s.recipient;
+  showOnly(loginGate);
+}
+
+/* ===================== SETUP SCREEN ===================== */
+document.getElementById('setupSaveBtn').addEventListener('click', () => {
+  const serviceId = document.getElementById('setupServiceId').value.trim();
+  const templateId = document.getElementById('setupTemplateId').value.trim();
+  const publicKey = document.getElementById('setupPublicKey').value.trim();
+  const recipient = document.getElementById('setupRecipient').value.trim();
+  const msg = document.getElementById('setupMsg');
+  if (!serviceId || !templateId || !publicKey || !recipient){
+    msg.className = 'gatemsg err';
+    msg.textContent = 'Please fill in all 4 boxes.';
+    return;
+  }
+  if (!/^\S+@\S+\.\S+$/.test(recipient)){
+    msg.className = 'gatemsg err';
+    msg.textContent = 'That email address does not look right.';
+    return;
+  }
+  saveSettings({ serviceId, templateId, publicKey, recipient });
+  msg.className = 'gatemsg ok';
+  msg.textContent = 'Saved! Loading login screen...';
+  setTimeout(boot, 500);
+});
+
+/* ===================== LOGIN SCREEN ===================== */
+let currentOtp = null;
+let otpExpiresAt = 0;
+
+function genOtp(){
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+document.getElementById('sendCodeBtn').addEventListener('click', async () => {
+  const s = loadSettings();
+  const btn = document.getElementById('sendCodeBtn');
+  const msg = document.getElementById('loginMsg');
+  msg.className = 'gatemsg';
+  msg.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  currentOtp = genOtp();
+  otpExpiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  try {
+    const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: s.serviceId,
+        template_id: s.templateId,
+        user_id: s.publicKey,
+        template_params: {
+          to_email: s.recipient,
+          otp_code: currentOtp
+        }
+      })
+    });
+    if (!resp.ok){
+      const body = await resp.text().catch(() => '');
+      throw new Error('EmailJS said: ' + resp.status + ' ' + body);
+    }
+    msg.className = 'gatemsg ok';
+    msg.textContent = 'Code sent! Check your email (it can take a minute).';
+    document.getElementById('codeEntryBlock').classList.remove('hidden');
+    btn.textContent = 'Resend Code';
+  } catch (err){
+    msg.className = 'gatemsg err';
+    msg.textContent = 'Could not send the email. Check your internet connection and Setup codes. (' + err.message + ')';
+    btn.textContent = 'Send Code to My Email';
+  }
+  btn.disabled = false;
+});
+
+document.getElementById('verifyBtn').addEventListener('click', () => {
+  const msg = document.getElementById('loginMsg');
+  const entered = document.getElementById('otpInput').value.trim();
+  if (!currentOtp){
+    msg.className = 'gatemsg err';
+    msg.textContent = 'Please click "Send Code" first.';
+    return;
+  }
+  if (Date.now() > otpExpiresAt){
+    msg.className = 'gatemsg err';
+    msg.textContent = 'That code expired. Please send a new one.';
+    return;
+  }
+  if (entered !== currentOtp){
+    msg.className = 'gatemsg err';
+    msg.textContent = 'That code is not right. Please try again.';
+    return;
+  }
+  sessionStorage.setItem('nextgen_logged_in', 'yes');
+  msg.className = 'gatemsg ok';
+  msg.textContent = 'Logged in!';
+  setTimeout(boot, 300);
+});
+
+document.getElementById('redoSetupBtn').addEventListener('click', () => {
+  showOnly(setupGate);
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  sessionStorage.removeItem('nextgen_logged_in');
+  currentOtp = null;
+  document.getElementById('otpInput').value = '';
+  document.getElementById('codeEntryBlock').classList.add('hidden');
+  document.getElementById('sendCodeBtn').textContent = 'Send Code to My Email';
+  document.getElementById('loginMsg').textContent = '';
+  boot();
+});
+
+boot();
+
+/* ===================== COUNTING TOOL (same logic as offline edition) ===================== */
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DATE_RE = /(\d{1,2})-([A-Za-z]{3})-(\d{4})/;
+
+const docBox = document.getElementById('docBox');
+const wordsBox = document.getElementById('wordsBox');
+const docCount = document.getElementById('docCount');
+const wordsCount = document.getElementById('wordsCount');
+const runBtn = document.getElementById('runBtn');
+const msg = document.getElementById('msg');
+const resultCard = document.getElementById('resultCard');
+const resultSub = document.getElementById('resultSub');
+const resultTable = document.getElementById('resultTable');
+const downloadBtn = document.getElementById('downloadBtn');
+
+let lastRows = null;
+
+function updateCounts(){
+  const docLines = docBox.value.split(/\r?\n/).filter(l => l.trim().length > 0);
+  const words = wordsBox.value.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+  docCount.textContent = docLines.length + " line" + (docLines.length===1?"":"s") + " pasted";
+  wordsCount.textContent = words.length + " search word" + (words.length===1?"":"s");
+}
+docBox.addEventListener('input', updateCounts);
+wordsBox.addEventListener('input', updateCounts);
+updateCounts();
+
+function monthYearKey(mon3, year){
+  const mon = mon3.slice(0,1).toUpperCase() + mon3.slice(1,3).toLowerCase();
+  if (MONTHS.indexOf(mon) === -1) return null;
+  return { label: mon + " " + year, sortKey: parseInt(year,10) * 100 + MONTHS.indexOf(mon) };
+}
+
+function runCount(){
+  msg.className = 'msg';
+  msg.textContent = '';
+  const text = docBox.value;
+  const rawWords = wordsBox.value.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+  const seen = new Set();
+  const words = [];
+  rawWords.forEach(w => { if(!seen.has(w.toLowerCase())){ seen.add(w.toLowerCase()); words.push(w); } });
+
+  if (!text.trim()){
+    msg.className = 'msg err';
+    msg.textContent = 'Please paste your document first.';
+    return;
+  }
+  if (!words.length){
+    msg.className = 'msg err';
+    msg.textContent = 'Please paste at least one search word.';
+    return;
+  }
+
+  const lines = text.split(/\r?\n/);
+  const counts = {};
+  const sortKeys = {};
+
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    const dm = line.match(DATE_RE);
+    if (!dm) return;
+    const my = monthYearKey(dm[2], dm[3]);
+    if (!my) return;
+    const lowerLine = line.toLowerCase();
+    words.forEach(w => {
+      if (lowerLine.includes(w.toLowerCase())){
+        if (!counts[my.label]) counts[my.label] = {};
+        counts[my.label][w] = (counts[my.label][w] || 0) + 1;
+        sortKeys[my.label] = my.sortKey;
+      }
+    });
+  });
+
+  const monthLabels = Object.keys(counts).sort((a,b) => sortKeys[a] - sortKeys[b]);
+
+  if (!monthLabels.length){
+    msg.className = 'msg err';
+    msg.textContent = 'No matches found — check that your document has dates like "03-Aug-2026" and that your search words appear in it.';
+    resultCard.style.display = 'none';
+    return;
+  }
+
+  const header = ["Month"].concat(words);
+  const rows = [header];
+  monthLabels.forEach(label => {
+    const row = [label];
+    words.forEach(w => row.push((counts[label] && counts[label][w]) || 0));
+    rows.push(row);
+  });
+  lastRows = rows;
+
+  let html = "<tr>" + header.map(h => `<th>${escapeHtml(h)}</th>`).join('') + "</tr>";
+  for (let i=1;i<rows.length;i++){
+    html += "<tr>" + rows[i].map((c,ci) => `<td>${escapeHtml(String(c))}</td>`).join('') + "</tr>";
+  }
+  resultTable.innerHTML = html;
+  resultSub.textContent = monthLabels.length + " month" + (monthLabels.length===1?"":"s") + " found, " + words.length + " search word" + (words.length===1?"":"s") + " — scroll sideways to see every column.";
+  resultCard.style.display = 'block';
+  msg.className = 'msg ok';
+  msg.textContent = 'Done! Scroll down to see your results.';
+}
+
+function escapeHtml(v){
+  return String(v).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+function downloadExcel(){
+  if (!lastRows) return;
+  const ws = XLSX.utils.aoa_to_sheet(lastRows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Counts");
+  const stamp = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `NextGen-Enrollment-Count-${stamp}.xlsx`);
+}
+
+runBtn.addEventListener('click', runCount);
+downloadBtn.addEventListener('click', downloadExcel);
+</script>
+</body>
+</html>
