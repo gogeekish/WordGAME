@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WORD ARENA TV</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080b12;color:#fff;font-family:Arial,sans-serif;overflow-x:hidden}
+.top{text-align:center;padding:12px 90px 8px;border-bottom:2px solid #ffffff20}.top h1{font-size:clamp(30px,4vw,60px);margin:0;font-weight:1000;letter-spacing:2px}.top p{margin:3px 0;font-size:clamp(14px,1.5vw,24px);opacity:.8}
+.timer{position:fixed;left:12px;top:12px;z-index:20;background:#111827;border:2px solid #ffffff40;border-radius:14px;padding:10px 16px;text-align:center;min-width:100px}.timer small{display:block;font-size:11px;opacity:.7}.timer strong{font-size:clamp(30px,4vw,55px)}
+.corner{position:fixed;right:12px;top:12px;z-index:20;text-align:center;max-width:130px}.corner img{width:100px;height:100px;object-fit:contain;border-radius:10px}.corner div{font-size:12px;margin-top:3px}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px}.player{background:#111827;border-radius:16px;padding:12px;min-width:0}.player h2{text-align:center;margin:0 0 8px;font-size:clamp(20px,2.3vw,34px)}.total{text-align:center;font-size:clamp(18px,2vw,28px);font-weight:900;margin-bottom:8px}
+.section{background:#1f2937;border-radius:12px;margin:9px 0;padding:9px}.section h3{margin:0 0 7px;text-align:center;font-size:18px;color:#dbeafe}
+.item{border-radius:9px;background:#0b1220;margin:6px 0;padding:8px}.label{font-size:11px;text-transform:uppercase;opacity:.65;font-weight:bold}.value{font-size:clamp(17px,1.8vw,27px);font-weight:800;white-space:pre-wrap;word-break:break-word}.question{border-left:4px solid #f59e0b}.score{border-left:4px solid #22c55e}.content{border-left:4px solid #3b82f6}
+.over{position:fixed;inset:0;background:#000e;z-index:50;display:none;align-items:center;justify-content:center;text-align:center;padding:20px}.over.show{display:flex}.over h2{font-size:clamp(45px,8vw,110px);margin:0}.over p{font-size:clamp(25px,4vw,55px)}
+@media(max-width:850px){.players{grid-template-columns:1fr}.corner{max-width:90px}.corner img{width:70px;height:70px}}
+@media print{body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div class="timer"><small>TIME</small><strong id="timer">30</strong></div>
+<div class="corner" id="corner"></div>
+<div class="top"><h1 id="title">WORD ARENA TV</h1><p id="subtitle">OFFLINE WORD GAME</p></div>
+<div class="players" id="players"></div>
+<div class="over" id="over"><div><h2>GAME OVER</h2><p id="winner"></p></div></div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket=io();let state;
+socket.on("state",s=>{state=s;render()});
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function render(){
+ if(!state)return;
+ document.title=state.title||"WORD ARENA TV";
+ document.getElementById("title").textContent=state.title||"WORD ARENA TV";
+ document.getElementById("subtitle").textContent=state.subtitle||"";
+ document.getElementById("timer").textContent=formatTime(state.timer.remaining);
+ const c=document.getElementById("corner");c.innerHTML=state.image.data?`<img src="${state.image.data}"><div>${esc(state.image.name)}</div>`:"";
+ const root=document.getElementById("players");root.innerHTML="";
+ state.players.forEach(p=>{
+  const el=document.createElement("div");el.className="player";
+  el.innerHTML=`<h2>${esc(p.name)}</h2><div class="total">TOTAL SCORE: ${esc(p.total)}</div>`;
+  p.sections.forEach((s,i)=>{
+   const sec=document.createElement("div");sec.className="section";
+   let html=`<h3>SECTION ${i+1}</h3>`;
+   if(s.showContent)html+=`<div class="item content"><div class="label">Document / Word / Content</div><div class="value">${esc(s.content)}</div></div>`;
+   if(s.showScore)html+=`<div class="item score"><div class="label">Mark / Score</div><div class="value">${esc(s.score)}</div></div>`;
+   if(s.showQuestion)html+=`<div class="item question"><div class="label">Question</div><div class="value">${esc(s.question)}</div></div>`;
+   sec.innerHTML=html;el.appendChild(sec);
+  });root.appendChild(el);
+ });
+ const over=document.getElementById("over");over.classList.toggle("show",!!state.gameOver);document.getElementById("winner").textContent=state.winner||"";
+}
+function formatTime(sec){sec=Math.max(0,Number(sec)||0);const m=Math.floor(sec/60),s=sec%60;return m?`${m}:${String(s).padStart(2,"0")}`:String(s)}
+</script>
+</body>
+</html>
