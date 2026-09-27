@@ -54,6 +54,17 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 </div>
 </div>
 
+<div class="panel" id="projectorPanel" style="display:none">
+<h2>🖥️ Second Screen / Projector</h2>
+<p style="font-size:13px;color:#475569;margin-top:0">In Windows, press the <b>Windows key + P</b> and choose <b>Extend</b> first. Then use the buttons below to send the game screen to the projector.</p>
+<div class="controls">
+<button class="green" onclick="sendToProjector()">Move Game Screen to Projector (Fullscreen)</button>
+<button class="gray" onclick="showWindowed()">Show Game Screen in a Window Instead</button>
+<button class="gray" onclick="detectDisplays()">Detect Displays Again</button>
+</div>
+<div id="displayInfo" style="margin-top:8px;font-size:13px;color:#475569"></div>
+</div>
+
 <div class="panel">
 <h2>Timer</h2>
 <div class="timer" id="timer">30</div>
@@ -224,7 +235,24 @@ function uploadImage(){
 }
 function clearImage(){state.image={data:"",name:""};send()}
 function formatTime(sec){sec=Math.max(0,Number(sec)||0);const m=Math.floor(sec/60),s=sec%60;return m?`${m}:${String(s).padStart(2,"0")}`:String(s)}
-function openPublic(){window.open("/public.html","_blank")}
+function openPublic(){
+ if(window.electronAPI&&window.electronAPI.isElectron){window.electronAPI.showGameScreen();}
+ else{window.open("/public.html","_blank")}
+}
+
+/* ---------- Second screen / projector (desktop app only) ---------- */
+if(window.electronAPI&&window.electronAPI.isElectron){
+ $("projectorPanel").style.display="";
+ detectDisplays();
+}
+async function sendToProjector(){await window.electronAPI.sendToProjector();detectDisplays()}
+async function showWindowed(){await window.electronAPI.showWindowed();detectDisplays()}
+async function detectDisplays(){
+ const displays=await window.electronAPI.listDisplays();
+ $("displayInfo").textContent=displays.length>1
+  ?`${displays.length} screens detected — ready to send the game screen to the projector.`
+  :`Only 1 screen detected. Connect your projector/TV and set Windows to "Extend", then click "Detect Displays Again".`;
+}
 
 /* ---------- Voice control ---------- */
 let focus={scope:'p0',qi:0};
