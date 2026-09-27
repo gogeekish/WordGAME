@@ -6,6 +6,7 @@ FILES
 - public.html
 - package.json
 - electron/main.js, electron/preload.js  (desktop app / .exe wrapper)
+- android/  (Android phone app project / .apk wrapper)
 
 ============================================================
 OPTION A — EASIEST: DOUBLE-CLICK THE .EXE (Windows, one PC + projector)
@@ -102,5 +103,51 @@ computer actually running Chrome locally (http://localhost:3000/admin.html).
 Browsers block microphone access on a plain http://COMPUTER-IP address for
 security reasons, so voice control won't work from a phone over Wi-Fi unless
 you set up HTTPS separately.
+
+============================================================
+ANDROID PHONE APP (prepare questions on your phone, even offline)
+============================================================
+"dist/WordArenaTV.apk" is a small phone app version of the Admin screen.
+Unlike opening admin.html in your phone's browser, this app lets you type
+in ALL your questions, answers and scores before you even connect to the
+game's WiFi — nothing is lost, it's saved right there on your phone.
+
+HOW TO INSTALL IT ON YOUR PHONE
+1. Copy WordArenaTV.apk onto your Android phone (send it to yourself, or
+   download it from wherever you got this project).
+2. Tap the file to install it. Android will warn you it's from "outside
+   the Play Store" — this is expected for an app made just for you; tap
+   "Install anyway" / "Install without scanning" if asked.
+3. Open the "Word Arena TV" app from your home screen.
+
+HOW TO USE IT
+1. Type in your questions, answers and scores any time — before or after
+   connecting to WiFi. Nothing is shown on the projector from the phone
+   app; it just saves your work on the phone until you send it over.
+2. When you get to the venue, connect your phone to the SAME WiFi as the
+   computer running the game.
+3. Tap "Find Game Computer" — the app searches the WiFi automatically.
+4. Once it says "Found the game computer...", tap "Sync Now — Send My
+   Questions". Everything you typed gets sent to the computer immediately.
+5. Keep using the regular Admin screen on the computer (or a browser) to
+   run the actual show — Show/Hide buttons, the timer, voice control, etc.
+   The phone app is just for typing things in ahead of time and sending
+   them over; it is not a remote control during the live show.
+6. The "Connection Info" box (also on the regular Admin screen) shows the
+   exact address to type into the projector's browser.
+
+Auto-search works by the phone shouting "is anyone there?" on the WiFi and
+the game computer answering back — this needs both devices on the same
+WiFi network, with the router not blocking that kind of local traffic
+(most home/venue WiFi is fine; some very locked-down office WiFi may block
+it — if "Find Game Computer" keeps failing, try a personal hotspot instead).
+
+BUILDING YOUR OWN .APK (only needed if you change the code)
+1. Install a Java JDK and the Android command-line tools/SDK.
+2. Run ./android/prepare-assets.sh (copies admin.html into the app, with
+   the offline flag switched on) whenever you change admin.html.
+3. From the "android" folder, run: gradle assembleDebug
+4. The finished file appears at
+   android/app/build/outputs/apk/debug/app-debug.apk
 
 The server keeps the game state in RAM while it is running. No internet is required.

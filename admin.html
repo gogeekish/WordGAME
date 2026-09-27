@@ -55,6 +55,22 @@ button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bo
 </div>
 
 <div class="panel">
+<h2>🔗 Connection Info</h2>
+<div id="connectionInfo" style="font-size:14px">Loading…</div>
+</div>
+
+<div class="panel" id="syncPanel" style="display:none">
+<h2>📶 Game Computer Connection</h2>
+<p style="font-size:13px;color:#475569;margin-top:0">Make sure this phone is on the same WiFi as the computer running the game, then tap "Find Game Computer". You can keep typing questions even before you find it — nothing is lost.</p>
+<div id="syncStatus" style="font-weight:bold;margin-bottom:8px">📴 Not connected — editing offline</div>
+<div class="controls">
+<button class="primary" onclick="discoverServer()">Find Game Computer</button>
+<button class="green" id="syncNowBtn" onclick="syncNow()" disabled>Sync Now — Send My Questions</button>
+</div>
+<div id="foundServerLabel" style="margin-top:8px;font-size:13px;color:#475569"></div>
+</div>
+
+<div class="panel">
 <h2>📋 Paste All Questions, Answers &amp; Scores</h2>
 <p style="font-size:13px;color:#475569;margin-top:0">Paste as many questions as you like at once. Start each question with its number (1-5), then list its answers with their points anywhere after — any spacing is fine. Example:</p>
 <pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap;margin:0 0 10px">1  Name something people do immediately after waking up. | Check phone 35
@@ -156,11 +172,16 @@ School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket=io(); let state;
 const $=id=>document.getElementById(id);
-socket.on("connect",()=>$("conn").textContent="Connected to offline LAN server");
-socket.on("disconnect",()=>$("conn").textContent="Disconnected");
-socket.on("state",s=>{state=s;render();});
+let socket,state;
+if(window.ANDROID_OFFLINE_MODE){
+ socket={emit(){},on(){},close(){},connected:false}; // no live connection until "Sync Now" is pressed
+} else {
+ socket=io();
+ socket.on("connect",()=>$("conn").textContent="Connected to offline LAN server");
+ socket.on("disconnect",()=>$("conn").textContent="Disconnected");
+ socket.on("state",s=>{state=s;render();});
+}
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
@@ -317,7 +338,7 @@ function importBulk(){
 }
 
 function save(){state.title=$("title").value;state.subtitle=$("subtitle").value;state.players[0].name=$("p1").value||"PLAYER 1";state.players[1].name=$("p2").value||"PLAYER 2";send()}
-function send(){socket.emit("updateState",state)}
+function send(){if(window.ANDROID_OFFLINE_MODE)saveDraft();socket.emit("updateState",state)}
 function gameOver(){state.gameOver=true;const a=state.players[0].total,b=state.players[1].total;state.winner=a>b?state.players[0].name:b>a?state.players[1].name:a===b?"DRAW":"";send()}
 function clearWinner(){state.gameOver=false;state.winner="";send()}
 function uploadImage(){
@@ -343,6 +364,91 @@ async function detectDisplays(){
  $("displayInfo").textContent=displays.length>1
   ?`${displays.length} screens detected — ready to send the game screen to the projector.`
   :`Only 1 screen detected. Connect your projector/TV and set Windows to "Extend", then click "Detect Displays Again".`;
+}
+
+/* ---------- Connection info (LAN address + Public Screen address) ---------- */
+async function loadConnectionInfo(){
+ try{
+  const base=(window.ANDROID_OFFLINE_MODE&&window.SERVER_BASE)?window.SERVER_BASE:"";
+  const res=await fetch(base+"/api/network-info");
+  const info=await res.json();
+  renderConnectionInfo(info);
+ }catch(e){
+  $("connectionInfo").textContent=window.ANDROID_OFFLINE_MODE
+   ?"Not connected to the game computer yet — this will fill in once you Sync."
+   :"Could not load connection info.";
+ }
+}
+function renderConnectionInfo(info){
+ const addrs=info.addresses||[];
+ if(!addrs.length){$("connectionInfo").textContent="No LAN address found. Make sure this computer is connected to WiFi/network.";return}
+ $("connectionInfo").innerHTML=addrs.map(ip=>{
+  const pubUrl=`http://${ip}:${info.port}/public.html`;
+  const adminUrl=`http://${ip}:${info.port}/admin.html`;
+  return `<div style="margin:6px 0"><b>Public Screen address (type this into the projector's browser):</b><br>
+  <code>${pubUrl}</code> <button class="tiny gray" onclick="copyText('${pubUrl}')">Copy</button><br>
+  <span style="font-size:12px;color:#475569">Admin address (for other phones/laptops on this WiFi): ${adminUrl}</span></div>`;
+ }).join("");
+}
+function copyText(t){if(navigator.clipboard)navigator.clipboard.writeText(t)}
+if(!window.ANDROID_OFFLINE_MODE)loadConnectionInfo();
+
+/* ---------- Android app: offline drafting + LAN auto-find + manual sync ---------- */
+function defaultState(){
+ const mkAnswer=()=>({text:"",mark:"",showAnswer:false,showMark:false});
+ const mkQuestion=()=>({question:"",showQuestion:false,answers:Array.from({length:5},mkAnswer)});
+ const mkPlayer=name=>({name,questions:Array.from({length:5},mkQuestion),bonus:0,total:0});
+ return {title:"WORD ARENA TV",subtitle:"OFFLINE WORD GAME",mode:"team",
+  timer:{running:false,remaining:30,lastStarted:null},gameOver:false,winner:"",image:{data:"",name:""},
+  players:[mkPlayer("PLAYER 1"),mkPlayer("PLAYER 2")],shared:{questions:Array.from({length:5},mkQuestion)}};
+}
+function saveDraft(){try{localStorage.setItem('waTvDraft',JSON.stringify(state))}catch(e){}}
+function updateSyncStatus(s){
+ const map={offline:"📴 Not connected — editing offline",searching:"🔍 Searching your WiFi for the game computer…",
+  notfound:"⚠️ Could not find it. Make sure you're on the same WiFi as the game computer, then try again.",
+  connecting:"🔄 Sending your questions…",synced:"✅ Sent! Check the game computer's screen.",
+  failed:"⚠️ Found it earlier, but could not reach it just now. Try again."};
+ const el=$("syncStatus");if(el)el.textContent=map[s]||s;
+}
+if(window.ANDROID_OFFLINE_MODE){
+ $("syncPanel").style.display="";
+ $("conn").textContent="📴 Offline app — editing on this phone";
+ let draft=null;
+ try{draft=JSON.parse(localStorage.getItem('waTvDraft')||"null")}catch(e){}
+ state=draft||defaultState();
+ window.SERVER_BASE=localStorage.getItem('waTvServerBase')||"";
+ setTimeout(render,0); // deferred: render() touches the voice-control "focus" var declared later in this script
+ updateSyncStatus("offline");
+ if(window.SERVER_BASE){$("syncNowBtn").disabled=false;loadConnectionInfo();}
+ else{$("connectionInfo").textContent="Not connected to the game computer yet — this will fill in once you Sync.";}
+
+ window.onServerFound=function(ip,port){
+  window.SERVER_BASE=`http://${ip}:${port||3000}`;
+  try{localStorage.setItem('waTvServerBase',window.SERVER_BASE)}catch(e){}
+  $("foundServerLabel").textContent=`Found the game computer at ${ip}. Tap "Sync Now" to send your questions.`;
+  $("syncNowBtn").disabled=false;
+  updateSyncStatus("offline");
+ };
+ window.onServerNotFound=function(){updateSyncStatus("notfound")};
+
+ window.discoverServer=function(){
+  updateSyncStatus("searching");
+  $("foundServerLabel").textContent="";
+  if(window.AndroidBridge&&window.AndroidBridge.discover){window.AndroidBridge.discover()}
+  else{$("foundServerLabel").textContent="Auto-search only works in the installed phone app, not in a regular browser."}
+ };
+ window.syncNow=function(){
+  if(!window.SERVER_BASE){alert('No game computer found yet. Tap "Find Game Computer" first while on its WiFi.');return}
+  updateSyncStatus("connecting");
+  const liveSocket=io(window.SERVER_BASE,{reconnection:false,timeout:5000});
+  liveSocket.on("connect",()=>{
+   liveSocket.emit("updateState",state);
+   updateSyncStatus("synced");
+   loadConnectionInfo();
+   setTimeout(()=>liveSocket.close(),500);
+  });
+  liveSocket.on("connect_error",()=>updateSyncStatus("failed"));
+ };
 }
 
 /* ---------- Voice control ---------- */

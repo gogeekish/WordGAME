@@ -1,0 +1,537 @@
+<script>window.ANDROID_OFFLINE_MODE=true;</script>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WORD ARENA TV - Admin</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#eef1f5;color:#111}
+header{background:#111827;color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:22px}.status{font-size:13px;color:#a7f3d0}
+.container{max-width:1250px;margin:auto;padding:18px}
+.panel{background:white;border-radius:14px;padding:16px;margin-bottom:18px;box-shadow:0 2px 10px #0001}
+h2,h3{margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+label{font-weight:bold;font-size:13px;display:block;margin:8px 0 5px}
+input,textarea,button{font:inherit}input,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px}textarea{min-height:60px;resize:vertical}
+button{border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:bold}
+.primary{background:#2563eb;color:white}.green{background:#16a34a;color:white}.red{background:#dc2626;color:white}.gray{background:#64748b;color:white}.orange{background:#ea580c;color:white}
+.modebtn.active{background:#16a34a;color:white}.modebtn{background:#cbd5e1;color:#111}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.section{border:1px solid #dbe2ea;border-radius:12px;padding:14px;margin-top:12px;outline-offset:2px}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin:10px 0}.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.showbtn{background:#0f766e;color:white}.hidebtn{background:#475569;color:white}.tiny{padding:6px 10px;font-size:12px}
+.timer{font-size:46px;font-weight:900;text-align:center;margin:8px}.winner{display:flex;gap:8px;align-items:center}
+.answer-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin:6px 0}
+.answer-row input{flex:2;min-width:120px}.mark-input{flex:1 !important;max-width:90px;min-width:70px !important}
+.answer-num{font-weight:bold;font-size:12px;color:#475569;min-width:18px}
+.scoreCard{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;border:1px solid #dbe2ea;border-radius:12px;padding:12px;margin-top:10px}
+.scoreCard .bonusBox{display:flex;gap:6px;align-items:center}.scoreCard .bonusBox input{width:90px}
+#voiceLog{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}header{position:relative}}
+</style>
+</head>
+<body>
+<header><h1>WORD ARENA TV — ADMIN</h1><div class="status" id="conn">Connecting…</div></header>
+<div class="container">
+<div class="panel">
+<h2>Game Settings</h2>
+<div class="grid">
+<div><label>Game Title</label><input id="title"></div>
+<div><label>Subtitle</label><input id="subtitle"></div>
+<div><label>Player 1 / Team 1</label><input id="p1"></div>
+<div><label>Player 2 / Team 2</label><input id="p2"></div>
+</div>
+<div class="controls">
+<button class="primary" onclick="save()">Save Settings</button>
+<button class="gray" onclick="openPublic()">Open Public Display</button>
+<button class="red" onclick="gameOver()">Game Over</button>
+<button class="gray" onclick="clearWinner()">Clear Winner</button>
+</div>
+<div class="controls" style="margin-top:14px">
+<b style="align-self:center">Board Mode:</b>
+<button class="modebtn" id="modeTeamBtn" onclick="setMode('team')">Team Mode — each player has their own 5 questions</button>
+<button class="modebtn" id="modeSharedBtn" onclick="setMode('shared')">Shared Mode — one board of 5 questions, award points by hand</button>
+</div>
+</div>
+
+<div class="panel">
+<h2>🔗 Connection Info</h2>
+<div id="connectionInfo" style="font-size:14px">Loading…</div>
+</div>
+
+<div class="panel" id="syncPanel" style="display:none">
+<h2>📶 Game Computer Connection</h2>
+<p style="font-size:13px;color:#475569;margin-top:0">Make sure this phone is on the same WiFi as the computer running the game, then tap "Find Game Computer". You can keep typing questions even before you find it — nothing is lost.</p>
+<div id="syncStatus" style="font-weight:bold;margin-bottom:8px">📴 Not connected — editing offline</div>
+<div class="controls">
+<button class="primary" onclick="discoverServer()">Find Game Computer</button>
+<button class="green" id="syncNowBtn" onclick="syncNow()" disabled>Sync Now — Send My Questions</button>
+</div>
+<div id="foundServerLabel" style="margin-top:8px;font-size:13px;color:#475569"></div>
+</div>
+
+<div class="panel">
+<h2>📋 Paste All Questions, Answers &amp; Scores</h2>
+<p style="font-size:13px;color:#475569;margin-top:0">Paste as many questions as you like at once. Start each question with its number (1-5), then list its answers with their points anywhere after — any spacing is fine. Example:</p>
+<pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap;margin:0 0 10px">1  Name something people do immediately after waking up. | Check phone 35
+Brush teeth 25
+Pray 20   Take a bath 12   Eat 8
+
+2  Name something people take to school.
+School bag 40   Books 25   lunch 15   Water bottle 12   Pen 8</pre>
+<div class="controls">
+<b style="align-self:center">Paste into:</b>
+<select id="bulkTarget" style="max-width:220px">
+<option value="p0">Team 1 questions</option>
+<option value="p1">Team 2 questions</option>
+<option value="shared">Shared Board questions</option>
+</select>
+</div>
+<textarea id="bulkText" style="min-height:160px" placeholder="Paste your questions, answers and scores here..."></textarea>
+<div class="controls">
+<button class="primary" onclick="importBulk()">Import — Fill In The Boxes Below</button>
+<button class="gray" onclick="$('bulkText').value=''">Clear Box</button>
+</div>
+<div id="bulkResult" style="margin-top:8px;font-size:13px"></div>
+<p style="font-size:12px;color:#475569;margin-bottom:0">Importing only fills in the boxes below — nothing appears on the public screen until you click its own Show button, same as always.</p>
+</div>
+
+<div class="panel" id="projectorPanel" style="display:none">
+<h2>🖥️ Second Screen / Projector</h2>
+<p style="font-size:13px;color:#475569;margin-top:0">In Windows, press the <b>Windows key + P</b> and choose <b>Extend</b> first. Then use the buttons below to send the game screen to the projector.</p>
+<div class="controls">
+<button class="green" onclick="sendToProjector()">Move Game Screen to Projector (Fullscreen)</button>
+<button class="gray" onclick="showWindowed()">Show Game Screen in a Window Instead</button>
+<button class="gray" onclick="detectDisplays()">Detect Displays Again</button>
+</div>
+<div id="displayInfo" style="margin-top:8px;font-size:13px;color:#475569"></div>
+</div>
+
+<div class="panel">
+<h2>Timer</h2>
+<div class="timer" id="timer">30</div>
+<div class="controls" style="justify-content:center">
+<button class="green" onclick="socket.emit('timerStart')">Start</button>
+<button class="orange" onclick="socket.emit('timerPause')">Pause</button>
+<button class="gray" onclick="socket.emit('timerReset',30)">Reset 30s</button>
+<button class="primary" onclick="socket.emit('timerAdd',15)">+15s</button>
+<button class="primary" onclick="socket.emit('timerAdd',30)">+30s</button>
+<button class="primary" onclick="socket.emit('timerAdd',60)">+1 min</button>
+</div>
+</div>
+
+<div class="panel" id="voicePanel">
+<h2>🎤 Voice Control (use on this host computer, in Chrome)</h2>
+<div class="controls">
+<button class="green" id="voiceBtn" onclick="toggleListening()">Start Listening</button>
+<span id="voiceStatus" style="align-self:center;font-size:13px;color:#475569">Not listening</span>
+</div>
+<div class="controls">
+<b style="align-self:center">Focus:</b>
+<button class="gray tiny" onclick="setFocus('p0',focus.qi)">Team 1</button>
+<button class="gray tiny" onclick="setFocus('p1',focus.qi)">Team 2</button>
+<button class="gray tiny" id="sharedFocusBtn" onclick="setFocus('shared',focus.qi)">Shared Board</button>
+</div>
+<div class="controls">
+<b style="align-self:center">Question:</b>
+<button class="gray tiny" onclick="setFocus(focus.scope,0)">1</button>
+<button class="gray tiny" onclick="setFocus(focus.scope,1)">2</button>
+<button class="gray tiny" onclick="setFocus(focus.scope,2)">3</button>
+<button class="gray tiny" onclick="setFocus(focus.scope,3)">4</button>
+<button class="gray tiny" onclick="setFocus(focus.scope,4)">5</button>
+</div>
+<div style="margin-top:8px;font-weight:bold">Currently controlling: <span id="focusLabel">PLAYER 1 — Question 1</span></div>
+<div id="voiceLog" style="margin-top:8px;font-size:12px;color:#475569;max-height:90px;overflow:auto">Say a command after clicking "Start Listening"…</div>
+<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:bold">Voice command list</summary>
+<div style="font-size:13px;line-height:1.7;margin-top:6px">
+"team 1" / "team 2" / "shared board" — switch which board you're controlling<br>
+"question 1" through "question 5" — jump to that question<br>
+"next question" / "previous question"<br>
+"show question" / "hide question" — reveal or hide the question text<br>
+"show answer 1" through "show answer 5" — reveal that answer<br>
+"hide answer 1" through "hide answer 5"<br>
+"show mark 1" (or "show score 1") through "show mark 5" — reveal that answer's points<br>
+"hide mark 1" through "hide mark 5"<br>
+"show all" / "hide all" — reveal or hide everything in the current question<br>
+"start timer" / "pause timer" / "reset timer"
+</div>
+</details>
+</div>
+
+<div class="panel" id="scorePanel"></div>
+<div id="board"></div>
+
+<div class="panel">
+<h2>Corner Image</h2>
+<input type="file" id="imageFile" accept="image/*">
+<label>Image Name (this is the only text shown below the image)</label>
+<input id="imageName" placeholder="e.g. Sponsor Logo">
+<div class="controls"><button class="primary" onclick="uploadImage()">Show/Update Image</button><button class="red" onclick="clearImage()">Remove Image</button></div>
+</div>
+</div>
+
+<script src="socket.io.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let socket,state;
+if(window.ANDROID_OFFLINE_MODE){
+ socket={emit(){},on(){},close(){},connected:false}; // no live connection until "Sync Now" is pressed
+} else {
+ socket=io();
+ socket.on("connect",()=>$("conn").textContent="Connected to offline LAN server");
+ socket.on("disconnect",()=>$("conn").textContent="Disconnected");
+ socket.on("state",s=>{state=s;render();});
+}
+
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+
+function getQArr(scope){
+ if(scope==="shared") return state.shared.questions;
+ return state.players[Number(scope[1])].questions;
+}
+function idBase(scope,qi,ai){return ai===undefined?`f-${scope}-${qi}`:`f-${scope}-${qi}-${ai}`}
+function labelForScope(scope){return scope==="shared"?"Shared Board":state.players[Number(scope[1])].name}
+
+function render(){
+ if(!state)return;
+ $("title").value=state.title;$("subtitle").value=state.subtitle;
+ $("p1").value=state.players[0].name;$("p2").value=state.players[1].name;
+ $("imageName").value=state.image.name||"";
+ $("timer").textContent=formatTime(state.timer.remaining);
+ $("modeTeamBtn").className="modebtn"+(state.mode==="team"?" active":"");
+ $("modeSharedBtn").className="modebtn"+(state.mode==="shared"?" active":"");
+ renderScorePanel();
+ if(state.mode==="shared") renderSharedBoard(); else renderTeamBoard();
+ highlightFocus();
+}
+
+function renderScorePanel(){
+ const p=state.players;
+ $("scorePanel").innerHTML=`<h2>Scoreboard</h2>
+ <div class="scoreCard"><div><b>${esc(p[0].name)}</b> — Total: <b>${p[0].total}</b></div>
+  <div class="bonusBox"><label style="margin:0">Bonus:</label><input id="bonus-p0" value="${esc(p[0].bonus)}"><button class="tiny primary" onclick="saveBonus(0)">Save</button></div></div>
+ <div class="scoreCard"><div><b>${esc(p[1].name)}</b> — Total: <b>${p[1].total}</b></div>
+  <div class="bonusBox"><label style="margin:0">Bonus:</label><input id="bonus-p1" value="${esc(p[1].bonus)}"><button class="tiny primary" onclick="saveBonus(1)">Save</button></div></div>`;
+}
+function saveBonus(pi){state.players[pi].bonus=$("bonus-p"+pi).value;send()}
+
+function questionCardHTML(scope,qi,q,showAward){
+ const rows=q.answers.map((a,ai)=>{
+  const award=showAward?`<button class="tiny primary" onclick="awardBonus(${qi},${ai},0)">+ ${esc(state.players[0].name)}</button><button class="tiny primary" onclick="awardBonus(${qi},${ai},1)">+ ${esc(state.players[1].name)}</button>`:"";
+  return `<div class="answer-row"><span class="answer-num">${ai+1}.</span>
+   <input id="${idBase(scope,qi,ai)}-text" value="${esc(a.text)}" placeholder="Answer ${ai+1}">
+   <input id="${idBase(scope,qi,ai)}-mark" class="mark-input" value="${esc(a.mark)}" placeholder="Mark">
+   <button class="tiny ${a.showAnswer?'hidebtn':'showbtn'}" onclick="toggleField('${scope}',${qi},${ai},'showAnswer')">${a.showAnswer?'Hide Ans':'Show Ans'}</button>
+   <button class="tiny ${a.showMark?'hidebtn':'showbtn'}" onclick="toggleField('${scope}',${qi},${ai},'showMark')">${a.showMark?'Hide Mark':'Show Mark'}</button>
+   <button class="tiny primary" onclick="saveAnswerRow('${scope}',${qi},${ai})">Save</button>
+   ${award}</div>`;
+ }).join("");
+ return `<div class="section" data-focus-scope="${scope}" data-focus-qi="${qi}">
+  <div class="section-title"><h3>Question ${qi+1}</h3>
+   <button class="tiny ${q.showQuestion?'hidebtn':'showbtn'}" onclick="toggleField('${scope}',${qi},undefined,'showQuestion')">${q.showQuestion?'Hide':'Show'}</button></div>
+  <textarea id="${idBase(scope,qi)}-q" placeholder="Type the question...">${esc(q.question)}</textarea>
+  <div class="controls"><button class="tiny primary" onclick="saveQuestion('${scope}',${qi})">Save Question</button></div>
+  ${rows}
+ </div>`;
+}
+
+function renderTeamBoard(){
+ const root=$("board");root.innerHTML="";
+ state.players.forEach((p,pi)=>{
+  const box=document.createElement("div");box.className="panel";
+  box.innerHTML=`<h2>${esc(p.name)}</h2>`+p.questions.map((q,qi)=>questionCardHTML('p'+pi,qi,q,false)).join("");
+  root.appendChild(box);
+ });
+}
+function renderSharedBoard(){
+ const root=$("board");root.innerHTML="";
+ const box=document.createElement("div");box.className="panel";
+ box.innerHTML=`<h2>Shared Board</h2><p style="font-size:13px;color:#475569">Use the "+ ${esc(state.players[0].name)}" / "+ ${esc(state.players[1].name)}" buttons to award that answer's points to a team once it's guessed.</p>`+
+  state.shared.questions.map((q,qi)=>questionCardHTML('shared',qi,q,true)).join("");
+ root.appendChild(box);
+}
+
+function saveQuestion(scope,qi){getQArr(scope)[qi].question=$(idBase(scope,qi)+"-q").value;send()}
+function saveAnswerRow(scope,qi,ai){
+ const a=getQArr(scope)[qi].answers[ai];
+ a.text=$(idBase(scope,qi,ai)+"-text").value;
+ a.mark=$(idBase(scope,qi,ai)+"-mark").value;
+ send();
+}
+function toggleField(scope,qi,ai,field){
+ const q=getQArr(scope)[qi];
+ const target=ai===undefined?q:q.answers[ai];
+ target[field]=!target[field];
+ send();
+}
+function awardBonus(qi,ai,playerIndex){
+ const mark=state.shared.questions[qi].answers[ai].mark;
+ const n=Number(String(mark).replace(/,/g,""));
+ state.players[playerIndex].bonus=(Number(state.players[playerIndex].bonus)||0)+(Number.isFinite(n)?n:0);
+ send();
+}
+function setMode(mode){state.mode=mode;send()}
+
+/* ---------- Bulk paste: questions + answers + marks ---------- */
+function isHeaderLine(line){
+ const m=line.match(/^\s*(\d{1,2})\s+(.+)$/);
+ if(!m)return null;
+ const core=m[2].split("|")[0].trim();
+ if(/\d$/.test(core))return null; // ends in a digit -> it's an answer line, not a question header
+ return {index:parseInt(m[1],10),rest:m[2]};
+}
+function parseBulkText(text){
+ const lines=text.replace(/ /g," ").split(/\r?\n/);
+ const questions=[];
+ let current=null;
+ lines.forEach(line=>{
+  if(!line.trim())return;
+  const header=isHeaderLine(line);
+  if(header){
+   if(current)questions.push(current);
+   let rest=header.rest,question=rest,tail="";
+   const pi=rest.indexOf("|");
+   if(pi>=0){question=rest.slice(0,pi);tail=rest.slice(pi+1)}
+   current={index:header.index,question:question.trim(),blob:tail?tail+" ":""};
+  } else if(current){
+   current.blob+=line+" ";
+  }
+ });
+ if(current)questions.push(current);
+ const answerRe=/([A-Za-z][A-Za-z'()/&.]*(?:[\s\-–—]+[A-Za-z][A-Za-z'()/&.]*)*)[\s\-–—:]+(\d+)/g;
+ questions.forEach(q=>{
+  const answers=[];
+  let m;
+  answerRe.lastIndex=0;
+  while((m=answerRe.exec(q.blob))&&answers.length<5){
+   answers.push({text:m[1].trim(),mark:m[2]});
+  }
+  while(answers.length<5)answers.push({text:"",mark:""});
+  q.answers=answers;
+ });
+ return questions;
+}
+function importBulk(){
+ const target=$("bulkTarget").value;
+ const text=$("bulkText").value;
+ const parsed=parseBulkText(text);
+ if(!parsed.length){
+  $("bulkResult").innerHTML='<span style="color:#dc2626">Could not find any numbered questions. Make sure each question starts with its number, like "1 ..." on its own.</span>';
+  return;
+ }
+ const qArr=getQArr(target);
+ let filled=0,skipped=[];
+ parsed.forEach(q=>{
+  if(q.index<1||q.index>qArr.length){skipped.push(q.index);return}
+  const slot=qArr[q.index-1];
+  slot.question=q.question;
+  slot.showQuestion=false;
+  slot.answers=q.answers.map(a=>({text:a.text,mark:a.mark,showAnswer:false,showMark:false}));
+  filled++;
+ });
+ send();render();
+ let msg=`Imported ${filled} question${filled===1?'':'s'} into ${esc(labelForScope(target))}. Nothing is shown on the public screen yet — use the Show buttons below when you're ready.`;
+ if(skipped.length)msg+=` (Skipped question number${skipped.length===1?'':'s'} ${skipped.join(', ')} — only 1–5 are allowed.)`;
+ if(target==="shared"&&state.mode!=="shared")msg+=' Switch to "Shared Mode" above to see these boxes.';
+ if(target!=="shared"&&state.mode!=="team")msg+=' Switch to "Team Mode" above to see these boxes.';
+ $("bulkResult").innerHTML=msg;
+}
+
+function save(){state.title=$("title").value;state.subtitle=$("subtitle").value;state.players[0].name=$("p1").value||"PLAYER 1";state.players[1].name=$("p2").value||"PLAYER 2";send()}
+function send(){if(window.ANDROID_OFFLINE_MODE)saveDraft();socket.emit("updateState",state)}
+function gameOver(){state.gameOver=true;const a=state.players[0].total,b=state.players[1].total;state.winner=a>b?state.players[0].name:b>a?state.players[1].name:a===b?"DRAW":"";send()}
+function clearWinner(){state.gameOver=false;state.winner="";send()}
+function uploadImage(){
+ const f=$("imageFile").files[0]; if(!f)return alert("Choose an image first.");
+ const r=new FileReader();r.onload=()=>{state.image={data:r.result,name:$("imageName").value||f.name};send()};r.readAsDataURL(f);
+}
+function clearImage(){state.image={data:"",name:""};send()}
+function formatTime(sec){sec=Math.max(0,Number(sec)||0);const m=Math.floor(sec/60),s=sec%60;return m?`${m}:${String(s).padStart(2,"0")}`:String(s)}
+function openPublic(){
+ if(window.electronAPI&&window.electronAPI.isElectron){window.electronAPI.showGameScreen();}
+ else{window.open("/public.html","_blank")}
+}
+
+/* ---------- Second screen / projector (desktop app only) ---------- */
+if(window.electronAPI&&window.electronAPI.isElectron){
+ $("projectorPanel").style.display="";
+ detectDisplays();
+}
+async function sendToProjector(){await window.electronAPI.sendToProjector();detectDisplays()}
+async function showWindowed(){await window.electronAPI.showWindowed();detectDisplays()}
+async function detectDisplays(){
+ const displays=await window.electronAPI.listDisplays();
+ $("displayInfo").textContent=displays.length>1
+  ?`${displays.length} screens detected — ready to send the game screen to the projector.`
+  :`Only 1 screen detected. Connect your projector/TV and set Windows to "Extend", then click "Detect Displays Again".`;
+}
+
+/* ---------- Connection info (LAN address + Public Screen address) ---------- */
+async function loadConnectionInfo(){
+ try{
+  const base=(window.ANDROID_OFFLINE_MODE&&window.SERVER_BASE)?window.SERVER_BASE:"";
+  const res=await fetch(base+"/api/network-info");
+  const info=await res.json();
+  renderConnectionInfo(info);
+ }catch(e){
+  $("connectionInfo").textContent=window.ANDROID_OFFLINE_MODE
+   ?"Not connected to the game computer yet — this will fill in once you Sync."
+   :"Could not load connection info.";
+ }
+}
+function renderConnectionInfo(info){
+ const addrs=info.addresses||[];
+ if(!addrs.length){$("connectionInfo").textContent="No LAN address found. Make sure this computer is connected to WiFi/network.";return}
+ $("connectionInfo").innerHTML=addrs.map(ip=>{
+  const pubUrl=`http://${ip}:${info.port}/public.html`;
+  const adminUrl=`http://${ip}:${info.port}/admin.html`;
+  return `<div style="margin:6px 0"><b>Public Screen address (type this into the projector's browser):</b><br>
+  <code>${pubUrl}</code> <button class="tiny gray" onclick="copyText('${pubUrl}')">Copy</button><br>
+  <span style="font-size:12px;color:#475569">Admin address (for other phones/laptops on this WiFi): ${adminUrl}</span></div>`;
+ }).join("");
+}
+function copyText(t){if(navigator.clipboard)navigator.clipboard.writeText(t)}
+if(!window.ANDROID_OFFLINE_MODE)loadConnectionInfo();
+
+/* ---------- Android app: offline drafting + LAN auto-find + manual sync ---------- */
+function defaultState(){
+ const mkAnswer=()=>({text:"",mark:"",showAnswer:false,showMark:false});
+ const mkQuestion=()=>({question:"",showQuestion:false,answers:Array.from({length:5},mkAnswer)});
+ const mkPlayer=name=>({name,questions:Array.from({length:5},mkQuestion),bonus:0,total:0});
+ return {title:"WORD ARENA TV",subtitle:"OFFLINE WORD GAME",mode:"team",
+  timer:{running:false,remaining:30,lastStarted:null},gameOver:false,winner:"",image:{data:"",name:""},
+  players:[mkPlayer("PLAYER 1"),mkPlayer("PLAYER 2")],shared:{questions:Array.from({length:5},mkQuestion)}};
+}
+function saveDraft(){try{localStorage.setItem('waTvDraft',JSON.stringify(state))}catch(e){}}
+function updateSyncStatus(s){
+ const map={offline:"📴 Not connected — editing offline",searching:"🔍 Searching your WiFi for the game computer…",
+  notfound:"⚠️ Could not find it. Make sure you're on the same WiFi as the game computer, then try again.",
+  connecting:"🔄 Sending your questions…",synced:"✅ Sent! Check the game computer's screen.",
+  failed:"⚠️ Found it earlier, but could not reach it just now. Try again."};
+ const el=$("syncStatus");if(el)el.textContent=map[s]||s;
+}
+if(window.ANDROID_OFFLINE_MODE){
+ $("syncPanel").style.display="";
+ $("conn").textContent="📴 Offline app — editing on this phone";
+ let draft=null;
+ try{draft=JSON.parse(localStorage.getItem('waTvDraft')||"null")}catch(e){}
+ state=draft||defaultState();
+ window.SERVER_BASE=localStorage.getItem('waTvServerBase')||"";
+ setTimeout(render,0); // deferred: render() touches the voice-control "focus" var declared later in this script
+ updateSyncStatus("offline");
+ if(window.SERVER_BASE){$("syncNowBtn").disabled=false;loadConnectionInfo();}
+ else{$("connectionInfo").textContent="Not connected to the game computer yet — this will fill in once you Sync.";}
+
+ window.onServerFound=function(ip,port){
+  window.SERVER_BASE=`http://${ip}:${port||3000}`;
+  try{localStorage.setItem('waTvServerBase',window.SERVER_BASE)}catch(e){}
+  $("foundServerLabel").textContent=`Found the game computer at ${ip}. Tap "Sync Now" to send your questions.`;
+  $("syncNowBtn").disabled=false;
+  updateSyncStatus("offline");
+ };
+ window.onServerNotFound=function(){updateSyncStatus("notfound")};
+
+ window.discoverServer=function(){
+  updateSyncStatus("searching");
+  $("foundServerLabel").textContent="";
+  if(window.AndroidBridge&&window.AndroidBridge.discover){window.AndroidBridge.discover()}
+  else{$("foundServerLabel").textContent="Auto-search only works in the installed phone app, not in a regular browser."}
+ };
+ window.syncNow=function(){
+  if(!window.SERVER_BASE){alert('No game computer found yet. Tap "Find Game Computer" first while on its WiFi.');return}
+  updateSyncStatus("connecting");
+  const liveSocket=io(window.SERVER_BASE,{reconnection:false,timeout:5000});
+  liveSocket.on("connect",()=>{
+   liveSocket.emit("updateState",state);
+   updateSyncStatus("synced");
+   loadConnectionInfo();
+   setTimeout(()=>liveSocket.close(),500);
+  });
+  liveSocket.on("connect_error",()=>updateSyncStatus("failed"));
+ };
+}
+
+/* ---------- Voice control ---------- */
+let focus={scope:'p0',qi:0};
+function setFocus(scope,qi){focus.scope=scope;focus.qi=qi;highlightFocus()}
+function highlightFocus(){
+ if(!state)return;
+ document.querySelectorAll('[data-focus-scope]').forEach(el=>{
+  const match=el.dataset.focusScope===focus.scope&&Number(el.dataset.focusQi)===focus.qi;
+  el.style.outline=match?"3px solid #f59e0b":"";
+ });
+ $("focusLabel").textContent=labelForScope(focus.scope)+" — Question "+(focus.qi+1);
+}
+function logVoice(text){
+ const el=$("voiceLog");
+ const line=document.createElement("div");line.textContent="> "+text;
+ el.appendChild(line);
+ while(el.children.length>8)el.removeChild(el.firstChild);
+ el.scrollTop=el.scrollHeight;
+}
+const WORD_NUM={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10};
+function parseNumber(str){
+ if(!str)return null;
+ str=str.trim().toLowerCase();
+ if(/^\d+$/.test(str))return parseInt(str,10);
+ return WORD_NUM[str]||null;
+}
+function setShow(scope,qi,ai,field,value){
+ const arr=getQArr(scope);
+ if(ai===undefined)arr[qi][field]=value; else arr[qi].answers[ai][field]=value;
+}
+
+let recognition=null,listening=false;
+function initRecognition(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){$("voiceStatus").textContent="Voice control isn't supported in this browser. Please use Chrome.";return null}
+ const r=new SR();
+ r.continuous=true;r.interimResults=false;r.lang="en-US";
+ r.onresult=e=>{
+  const text=e.results[e.results.length-1][0].transcript.trim().toLowerCase();
+  logVoice(text);
+  handleVoiceCommand(text);
+ };
+ r.onerror=e=>logVoice("(mic error: "+e.error+")");
+ r.onend=()=>{if(listening)try{r.start()}catch(e){}};
+ return r;
+}
+function toggleListening(){
+ if(!recognition)recognition=initRecognition();
+ if(!recognition)return;
+ listening=!listening;
+ if(listening){recognition.start();$("voiceBtn").textContent="Stop Listening";$("voiceStatus").textContent="Listening…"}
+ else{recognition.stop();$("voiceBtn").textContent="Start Listening";$("voiceStatus").textContent="Stopped"}
+}
+function handleVoiceCommand(text){
+ let m;
+ if(m=text.match(/^(?:team|player)\s+(\w+)$/)){const n=parseNumber(m[1]);if(n===1||n===2){setFocus('p'+(n-1),focus.qi);return}}
+ if(/^shared(\s+board)?$/.test(text)){setFocus('shared',focus.qi);return}
+ if(m=text.match(/^(?:go to |focus )?question\s+(\w+)$/)){const n=parseNumber(m[1]);if(n>=1&&n<=5){setFocus(focus.scope,n-1)}return}
+ if(/^next question$/.test(text)){setFocus(focus.scope,Math.min(4,focus.qi+1));return}
+ if(/^(?:previous|prev) question$/.test(text)){setFocus(focus.scope,Math.max(0,focus.qi-1));return}
+ if(m=text.match(/^show question(?:\s+(\w+))?$/)){const qi=m[1]?parseNumber(m[1])-1:focus.qi;setFocus(focus.scope,qi);setShow(focus.scope,qi,undefined,'showQuestion',true);send();render();return}
+ if(/^hide question$/.test(text)){setShow(focus.scope,focus.qi,undefined,'showQuestion',false);send();render();return}
+ if(m=text.match(/^show answer\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showAnswer',true);send();render()}return}
+ if(m=text.match(/^hide answer\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showAnswer',false);send();render()}return}
+ if(m=text.match(/^show (?:mark|score)\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showMark',true);send();render()}return}
+ if(m=text.match(/^hide (?:mark|score)\s+(\w+)$/)){const ai=parseNumber(m[1])-1;if(ai>=0&&ai<5){setShow(focus.scope,focus.qi,ai,'showMark',false);send();render()}return}
+ if(/^show all$/.test(text)){
+  setShow(focus.scope,focus.qi,undefined,'showQuestion',true);
+  for(let ai=0;ai<5;ai++){setShow(focus.scope,focus.qi,ai,'showAnswer',true);setShow(focus.scope,focus.qi,ai,'showMark',true)}
+  send();render();return;
+ }
+ if(/^hide all$/.test(text)){
+  setShow(focus.scope,focus.qi,undefined,'showQuestion',false);
+  for(let ai=0;ai<5;ai++){setShow(focus.scope,focus.qi,ai,'showAnswer',false);setShow(focus.scope,focus.qi,ai,'showMark',false)}
+  send();render();return;
+ }
+ if(/^start timer$/.test(text)){socket.emit('timerStart');return}
+ if(/^pause timer$/.test(text)){socket.emit('timerPause');return}
+ if(/^reset timer$/.test(text)){socket.emit('timerReset',30);return}
+ logVoice('(not recognized: "'+text+'")');
+}
+</script>
+</body>
+</html>

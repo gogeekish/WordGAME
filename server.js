@@ -2,14 +2,49 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const os = require("os");
+const dgram = require("dgram");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+// cors: "*" so the Android app (loaded from file://, a different origin) can sync to this server
+const io = new Server(server, { cors: { origin: "*" } });
 
 const PORT = process.env.PORT || 3000;
+const DISCOVERY_PORT = 41234;
+const DISCOVERY_MESSAGE = "WORD_ARENA_TV_DISCOVER";
 
 app.use(express.static(__dirname));
+
+function getLanAddresses() {
+  const addresses = [];
+  Object.values(os.networkInterfaces()).forEach(list => {
+    (list || []).forEach(info => {
+      if (info.family === "IPv4" && !info.internal) addresses.push(info.address);
+    });
+  });
+  return addresses;
+}
+
+app.get("/api/network-info", (req, res) => {
+  res.json({ addresses: getLanAddresses(), port: PORT });
+});
+
+// Lets the Android app find this computer on the WiFi/LAN automatically:
+// the phone broadcasts DISCOVERY_MESSAGE and this replies with our port,
+// so the phone learns our IP from where the reply came from.
+const discoverySocket = dgram.createSocket("udp4");
+discoverySocket.on("message", (msg, rinfo) => {
+  if (msg.toString().trim() !== DISCOVERY_MESSAGE) return;
+  const reply = Buffer.from(JSON.stringify({ app: "word-arena-tv", port: PORT }));
+  discoverySocket.send(reply, rinfo.port, rinfo.address);
+});
+discoverySocket.on("error", err => {
+  console.log("LAN auto-find service could not start (Android auto-search won't work):", err.message);
+});
+discoverySocket.bind(DISCOVERY_PORT, () => {
+  try { discoverySocket.setBroadcast(true); } catch (e) {}
+});
 
 const QUESTIONS_PER_PLAYER = 5;
 const ANSWERS_PER_QUESTION = 5;
