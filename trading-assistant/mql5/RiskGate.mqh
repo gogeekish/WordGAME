@@ -116,6 +116,49 @@ public:
    }
 
    //+------------------------------------------------------------------+
+   //| Adds a small "Reset Risk Gate" button to the chart, matching the  |
+   //| button in the desktop app - without this, the only way to clear  |
+   //| a halt was removing and re-adding the EA. Call once from OnInit;  |
+   //| call DeleteResetButton() from OnDeinit to clean it up.            |
+   //+------------------------------------------------------------------+
+   void CreateResetButton(const string buttonName, const int x = 10, const int y = 20)
+   {
+      if(ObjectFind(0, buttonName) >= 0)
+         return;
+
+      ObjectCreate(0, buttonName, OBJ_BUTTON, 0, 0, 0);
+      ObjectSetInteger(0, buttonName, OBJPROP_CORNER, CORNER_LEFT_UPPER);
+      ObjectSetInteger(0, buttonName, OBJPROP_XDISTANCE, x);
+      ObjectSetInteger(0, buttonName, OBJPROP_YDISTANCE, y);
+      ObjectSetInteger(0, buttonName, OBJPROP_XSIZE, 150);
+      ObjectSetInteger(0, buttonName, OBJPROP_YSIZE, 26);
+      ObjectSetString(0, buttonName, OBJPROP_TEXT, "Reset Risk Gate");
+      ObjectSetInteger(0, buttonName, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, buttonName, OBJPROP_BACK, false);
+      ObjectSetInteger(0, buttonName, OBJPROP_HIDDEN, true);
+   }
+
+   void DeleteResetButton(const string buttonName)
+   {
+      if(ObjectFind(0, buttonName) >= 0)
+         ObjectDelete(0, buttonName);
+   }
+
+   //+------------------------------------------------------------------+
+   //| Call from OnChartEvent for every CHARTEVENT_OBJECT_CLICK. Returns |
+   //| true (and resets the gate) if `sparam` was this gate's button.    |
+   //+------------------------------------------------------------------+
+   bool HandleButtonClick(const string clickedName, const string buttonName)
+   {
+      if(clickedName != buttonName)
+         return(false);
+
+      Reset();
+      ObjectSetInteger(0, buttonName, OBJPROP_STATE, false); // un-press the button
+      return(true);
+   }
+
+   //+------------------------------------------------------------------+
    //| Looks up this EA's closing deals (DEAL_ENTRY_OUT) for `symbol`   |
    //| and `magic`, feeding each one's outcome into RecordOutcome().    |
    //| Tracks already-seen ticket numbers so a deal is never reported   |

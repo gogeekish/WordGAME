@@ -243,16 +243,19 @@ trade again after a trade closes:
   before trading again. A winning trade does not trigger a cooldown.
 - **Max consecutive losses** - after this many losses in a row, stop
   completely. It does **not** turn back on by itself - someone has to
-  restart it (call `.reset()` in Python, or reload the EA in MT5)
-  after reviewing what happened.
+  reset it after reviewing what happened. In the desktop app, click
+  **"Reset Risk Gate"**. In MT5, click the **"Reset Risk Gate" button
+  that appears in the top-left corner of the chart** once any of the 4
+  Auto Trade EAs is attached - no need to remove and re-add the EA
+  anymore. In plain Python, call `gate.reset()`.
 
 **Current honest recommendation** (from testing on real data - see
 `risk_gate_test.py`): the cooldown helps and is worth keeping close to
-its default. The circuit breaker's default (`max_consecutive_losses=3`,
-2 in one MQL5 file) is too sensitive for how often these strategies
-currently lose 2-3 times in a row just from normal variance - consider
-raising it, e.g. to 5-6, unless you specifically want it to stop very
-easily.
+its default. The original circuit-breaker default
+(`max_consecutive_losses=3`) was too sensitive for how often these
+strategies currently lose 2-3 times in a row just from normal
+variance, so the shipped default is now **5** everywhere (app and all
+4 MQL5 EAs) - still adjustable per your own risk tolerance.
 
 ## What's NOT verified - read this before trusting any of it
 

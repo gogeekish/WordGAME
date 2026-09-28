@@ -85,7 +85,7 @@ class TradingAssistantApp:
         self.stop_distance_var = tk.StringVar(value="5.0")
         self.reward_multiple_var = tk.StringVar(value="2.0")
         self.cooldown_bars_var = tk.StringVar(value="5")
-        self.max_losses_var = tk.StringVar(value="3")
+        self.max_losses_var = tk.StringVar(value="5")
         self.poll_seconds_var = tk.StringVar(value="5")
 
         def row(label, widget, r):

@@ -21,7 +21,9 @@ input double InpRewardMultiple = 2.0;     // Take-profit distance = stop distanc
 input ulong  InpMagicNumber    = 20260101;
 input bool   InpUsePushNotify  = false;   // Also send a push notification (requires MetaTrader setup)
 input int    InpCooldownBars         = 5; // Bars to wait after a LOSS before trading again
-input int    InpMaxConsecutiveLosses = 3; // Halt entirely after this many losses in a row (needs a manual restart)
+input int    InpMaxConsecutiveLosses = 5; // Halt entirely after this many losses in a row (needs a manual restart)
+
+#define RESET_BUTTON_NAME "S1_RiskGateResetBtn"
 
 CTrade   g_trade;
 CRiskGate g_riskGate;
@@ -35,6 +37,7 @@ int OnInit()
 {
    g_trade.SetExpertMagicNumber(InpMagicNumber);
    g_riskGate.Init(InpCooldownBars, InpMaxConsecutiveLosses);
+   g_riskGate.CreateResetButton(RESET_BUTTON_NAME);
    g_lastProcessedBarTime = 0;
    g_pendingSweep = false;
    return(INIT_SUCCEEDED);
@@ -42,6 +45,19 @@ int OnInit()
 
 void OnDeinit(const int reason)
 {
+   g_riskGate.DeleteResetButton(RESET_BUTTON_NAME);
+}
+
+//+------------------------------------------------------------------+
+//| Handles clicks on the "Reset Risk Gate" chart button.             |
+//+------------------------------------------------------------------+
+void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
+{
+   if(id == CHARTEVENT_OBJECT_CLICK && g_riskGate.HandleButtonClick(sparam, RESET_BUTTON_NAME))
+   {
+      Print("Strategy 1 auto: risk gate manually reset via chart button.");
+      ChartRedraw(0);
+   }
 }
 
 //+------------------------------------------------------------------+
