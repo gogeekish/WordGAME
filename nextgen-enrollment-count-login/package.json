@@ -1,6 +1,6 @@
 {
   "name": "nextgen-enrollment-count-login",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "NextGen Enrollment Count with a direct-email OTP login gate (no third-party service)",
   "main": "electron/main.js",
   "scripts": {

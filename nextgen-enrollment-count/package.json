@@ -1,6 +1,6 @@
 {
   "name": "nextgen-enrollment-count",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Paste a document, paste search words, count matches by Month+Year, export to Excel",
   "main": "electron/main.js",
   "scripts": {

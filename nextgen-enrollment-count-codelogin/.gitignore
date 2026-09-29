@@ -3,6 +3,10 @@ dist/*
 !dist/*.exe
 !dist/*.apk
 !dist/resources.neu
+!dist/v*/
+dist/v*/*
+!dist/v*/*.exe
+!dist/v*/resources.neu
 android/build/
 android/app/build/
 android/.gradle/
